@@ -51,8 +51,6 @@ function git_subgit_svn_import_cleanup_remote()
   #
   [[ -n "${COMSPEC+x}" ]] && unset HOME
 
-  local ref
-
   # based on: https://stackoverflow.com/questions/46229291/in-git-how-can-i-efficiently-delete-all-refs-matching-a-pattern/46229416#46229416
   evalcall "git for-each-ref --format='--delete \"$remote\" %(refname)' refs/notes/commits | evalcallxargs git push"
   evalcall "git for-each-ref --format='--delete \"$remote\" %(refname)' refs/svn/history | evalcallxargs git push"

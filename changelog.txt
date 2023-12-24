@@ -1,3 +1,6 @@
+2023.12.25:
+* new: git_sync_remotes.sh: add script to pull local branches from the input remote and push them into the list of remotes
+
 2023.12.24:
 * new: extracted scripts and changelog file from `tacklelib` project
 * new: README_EN.txt: readme file
