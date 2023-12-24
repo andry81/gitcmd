@@ -1,0 +1,134 @@
+2023.12.24:
+* new: extracted scripts and changelog file from `tacklelib` project
+* new: README_EN.txt: readme file
+* new: license.txt: license file
+
+2023.12.20:
+* new: git_subgit_svn_import_cleanup.sh: script to complete the last operation and cleanup artefacts after using `subgit import ...` command (https://subgit.com/documentation/howto.html#import)
+* new: git_subgit_svn_import_cleanup_remote.sh: script to complete the last operation and cleanup artefacts after using `subgit import ...` command in the remote (https://subgit.com/documentation/howto.html#import)
+
+2023.12.18:
+* changed: more examples
+
+2023.12.18:
+* new: git_filter_repo_replace_commit_msg.sh: added `-use-re-sub` flag and `-re-sub-flags <re-sub-flags-python-expr>` option to be able to use regular expression instead of raw substring replace
+
+2023.11.09:
+* new: git_init.sh: script to initialize a git repository and all common properties
+
+2023.09.18:
+* fixed: git_filter_branch_update_file.sh: missed change
+
+2023.08.17:
+* fixed: git_bare_config_deny_rewrite.sh: missed change
+
+2023.06.28:
+* changed: git_filter_branch_*.sh: details fixup
+
+2023.06.03:
+* fixed: git_bare_*.sh, git_filter_branch_update_file_text.sh: portable `find` utility detection behind `$SYSTEMROOT\System32\find.exe`
+* changed: git_filter_branch_update_file_text.sh: added `<dir>` positional required parameter to pass parameters to `find` utility as is
+* changed: git_filter_branch_update_file_text.sh: added `--esc-sh-chars` option to explicitly escape shell control characters
+
+2023.06.02:
+* fixed: git_filter_branch_update_file.sh: execution fixup
+
+2023.06.02:
+* new: git_filter_branch_remove_path*.sh: script to remove file or directory in a single commit (last commit) or multiple commits (first commit(s)) using `git update-index --index-info`, `git update-index --remove` or `git rm`
+* changed: git_filter_branch_update_file.sh: added flag `-f`
+* changed: git_*.sh: scripts improvements and fixup
+
+2023.05.26:
+* fixed: git_filter_repo_shrink_commit_msg_first_line_returns.sh: execution fixup
+
+2023.05.24:
+* changed: git_filter_repo_cleanup.sh: more details
+
+2023.05.24:
+* changed: git_filter_repo_remove_path*.sh: added usage of `--partial` flag by default
+* changed: git_filter_repo_remove_path*.sh: more details
+
+2023.05.23:
+* fixed: git_filter_branch_update_file_text.sh: workarounded sed to enable it to match multiline text
+* new: git_filter_branch_update_file_text.sh: added `-E` and `-r` flags to enable sed to use extended regular expression
+* changed: git_filter_branch_update_file*.sh: more details
+
+2023.05.22:
+* changed: git_filter_branch_update_file.sh: more details
+
+2023.05.20:
+* fixed: git_filter_branch_update_file_text.sh: workarounded line returns reformat in Windows by `sed`
+
+2023.05.20:
+* new: git_filter_branch_update_file_text.sh: script to replace file text in a single commit (last commit) or multiple commits (first commit(s)) using `git filter-branch --tree-filter` with `find` and `sed`
+
+2023.05.20:
+* changed: git_filter_repo_*.sh: added direct documentation link
+
+2023.05.20:
+* changed: git_filter_branch_update_file.sh: more details
+
+2023.05.19:
+* fixed: git_filter_branch_update_file.sh: minor fixup
+* changed: git_filter_branch_update_file.sh: more details
+
+2023.05.18:
+* changed: git_filter_*.sh: minor details
+
+2023.05.18:
+* new: git_filter_branch_update_file.sh: script to add or replace file in a single commit (last commit) or multiple commits (first commit(s)) using `git update-index --add`
+
+2023.05.18:
+* new: git_filter_repo_shrink_commit_msg_first_line_returns.sh: added `-r1` flag to leave one more line return after the first line
+
+2023.05.17:
+* changed: git_*.sh: replaced call to `git-filter-repo` script by call to `git filter-repo` command
+
+2023.05.02:
+* new: git_gen_commit_hash.sh: added `-p` flag to additionally generate and print parent hashes
+
+2023.04.30:
+* new: git_gen_revlist_commit_hashes.sh: added `-r` flag to execute `git replace --graft <commit> <parents>` for all commits with not equal hashes
+
+2023.04.30:
+* new: git_gen_commit_hash.sh, git_gen_*_commit_hashes.sh: scripts to generate commit hashes and compare with existing hashes to detect commits inconsistency after history rewrite by `git filter-repo` command
+
+2023.04.20:
+* fixed: git_filter_repo_shrink_commit_msg_first_line_returns.sh: execution fixup
+
+2023.04.20:
+* fixed: return exit codes from single calls
+* new: git_filter_repo_replace_commit_msg.sh: added script to replace commit message from all commits in a repository using `git-filter-repo` script
+* refactor: git_filter_repo_*.sh: minor refactor
+
+2023.04.20:
+* changed: git_filter_repo_shrink_commit_msg_first_line_returns.sh: imply `--partial` flag by default to avoid remove the origin remote
+
+2023.04.20:
+* new: git_filter_repo_shrink_commit_msg_first_line_returns.sh: added `git_filter_repo_shrink_commit_msg_first_line_returns.sh` script to shrink first line returns (remove all line returns before the first line and shrink repeating line returns after the first line) from all commits in a repository using `git-filter-repo` script
+* new: git_filter_repo_remove_path_list.sh: added script to remove path list from all commits in a repository using `git-filter-repo` script
+* changed: git_filter_repo_*.sh: use `call` prefix to print resulted command line into the stdout
+
+2023.04.12:
+* changed: examples
+
+2023.04.04:
+* new: git_bare_config_allow_rewrite.sh: added script to allow rewrite in a git bare repository or list of repositories
+* new: git_bare_config_deny_rewrite.sh: added script to deny rewrite in a git bare repository or list of repositories
+* new: git_filter_repo_cleanup.sh: added cleanup script after the `git-filter-repo` script execution
+* new: git_filter_repo_remove_path.sh: added script to remove a path from all commits in a repository using `git-filter-repo` script
+
+2023.02.26:
+* new: git_filter_branch_cleanup.sh: added `git_filter_branch_cleanup.sh` script to cleanup artefacts after branch filtering with the `git_filter_branch_user.sh` script execution
+
+2023.02.26:
+* new: git_unmirror_refs.sh: added `git_unmirror_refs.sh` script to unmirror mirrored remote repositories (port of `git_unmirror_refs.bat` script from `contools` project)
+* changed: git_filter_branch_user.sh: rewrited for more accurate user match
+* changed: README_EN.txt: description and usage examples is moved into the scripts
+
+2023.02.20:
+* fixed: git_filter_branch_lib.sh: minor fixup
+* changed: README_EN.txt: readme update
+
+2020.09.04:
+* new: git filter-branch library + readme file
