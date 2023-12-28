@@ -1,4 +1,7 @@
 2023.12.28:
+* new: git_sync_remotes.sh: added `<push-cmd-line>` argument list to use the rest of command line in each push command
+
+2023.12.28:
 * fixed: README_EN.txt: readme fixup
 
 2023.12.28:

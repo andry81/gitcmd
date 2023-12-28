@@ -4,18 +4,24 @@
 #   Script to synchronize one remote with other remotes in a working copy.
 
 # Usage:
-#   git_sync_remotes.sh <from-remote> [to-remote1 [to-remote2 [...to-remoteN]]] [: branch1 [branch2 [...branchN]]]
+#   git_sync_remotes.sh <from-remote> [to-remote1 [to-remote2 [...to-remoteN]]] [: branch1 [branch2 [...branchN]]] [// <push-cmd-line>]
 #
-# <from-remote>:
-#   Remote to pull from.
+#   //:
+#     Separator to stop parse flags or previous command line argument list.
 #
-# <to-remote>:
-#   Remote to push into.
-#   If not defined, then `git remote` is used instead.
+#   <from-remote>:
+#     Remote to pull from.
 #
-# <branch>:
-#   Branch to pull from <from-remote> and push to all <to-remote>.
-#   If not defined, then `git branch` is used instead.
+#   <to-remote>:
+#     Remote to push into.
+#     If not defined, then `git remote` is used instead.
+#
+#   <branch>:
+#     Branch to pull from <from-remote> and push to all <to-remote>.
+#     If not defined, then `git branch` is used instead.
+#
+#   <push-cmd-line>:
+#     The rest of command line passed to each `git push ...` command.
 
 # NOTE:
 #   You must use `GIT_SSH` variable to pass the path to plink agent if want to
@@ -58,6 +64,7 @@ function git_sync_remotes()
   local to_remotes=()
   local arg
   local i
+  local next_cmdline=0
 
   # read output remotes
   local num_args=${#@}
@@ -68,6 +75,9 @@ function git_sync_remotes()
     shift
 
     if [[ "$arg" == ':' ]]; then
+      break
+    elif [[ "$arg" == '//' ]]; then
+      next_cmdline=1
       break
     fi
 
@@ -98,13 +108,20 @@ function git_sync_remotes()
   # read output branches
   local num_args=${#@}
 
-  for (( i=0; i < num_args; i++ )); do
-    arg="$1"
+  if (( ! next_cmdline )); then
+    for (( i=0; i < num_args; i++ )); do
+      arg="$1"
 
-    shift
+      shift
 
-    branches[i]="$arg"
-  done
+      if [[ "$arg" == '//' ]]; then
+        next_cmdline=1
+        break
+      fi
+
+      branches[i]="$arg"
+    done
+  fi
 
   if (( ! ${#branches[@]} )); then
     i=0
@@ -112,6 +129,28 @@ function git_sync_remotes()
       branches[i++]="${arg:2}"
     done < <(git branch --no-color)
   fi
+
+  if [[ "$arg" == '//' ]]; then
+    shift
+  fi
+
+  # read <push-cmd-line>
+  next_cmdline=0
+
+  local num_args=${#@}
+  local push_cmdline
+
+  for (( i=0; i < num_args; i++ )); do
+    arg="$1"
+
+    shift
+
+    if [[ "${arg//[ \t]/}" == "$arg" ]]; then
+      push_cmdline="$push_cmdline ${arg//\$/\\\$}"
+    else
+      push_cmdline="$push_cmdline \"${arg//\$/\\\$}\""
+    fi
+  done
 
   local refs_cmdline
   local branch
@@ -121,7 +160,7 @@ function git_sync_remotes()
   #   `fatal: Cannot fast-forward to multiple branches.`
   #
   for branch in "${branches[@]}"; do
-    refs_cmdline="$refs_cmdline \"$branch\""
+    refs_cmdline="$refs_cmdline${refs_cmdline:+ }\"$branch\""
 
     # pull at first to check on merged heads
     call git pull --ff-only "$remote" -- "$branch" || return
@@ -130,7 +169,7 @@ function git_sync_remotes()
   local to_remote
 
   for to_remote in "${to_remotes[@]}"; do
-    evalcall git push --tags "\"$to_remote\"" -- $refs_cmdline
+    evalcall git push --tags$push_cmdline "'$to_remote'" -- $refs_cmdline
   done
 }
 
