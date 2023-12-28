@@ -1,5 +1,5 @@
 * README_EN.txt
-* 2023.12.24
+* 2023.12.28
 * gitcmd
 
 1. DESCRIPTION
@@ -26,10 +26,10 @@ Primary:
     https://github.com/andry81/gitcmd.git
 First mirror:
   * https://sf.net/p/gitcmd/gitcmd/ci/master/tree
-    https://svn.code.sf.net/p/gitcmd/gitcmd
+    https://git.code.sf.net/p/gitcmd/gitcmd
 Second mirror:
-  * https://gitlab.org/andry81/gitcmd/branches
-    https://gitlab.org/andry81/gitcmd.git
+  * https://gitlab.com/andry81/gitcmd/-/branches
+    https://gitlab.com/andry81/gitcmd.git
 
 -------------------------------------------------------------------------------
 4. AUTHOR

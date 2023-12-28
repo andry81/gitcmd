@@ -1,4 +1,7 @@
 2023.12.28:
+* fixed: README_EN.txt: readme fixup
+
+2023.12.28:
 * fixed: git_sync_remotes.sh: git error `fatal: Cannot fast-forward to multiple branches.`
 
 2023.12.25:
