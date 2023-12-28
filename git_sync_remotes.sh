@@ -116,12 +116,16 @@ function git_sync_remotes()
   local refs_cmdline
   local branch
 
+  # CAUTION:
+  #   Must use a single branch in a pull command to avoid the error:
+  #   `fatal: Cannot fast-forward to multiple branches.`
+  #
   for branch in "${branches[@]}"; do
     refs_cmdline="$refs_cmdline \"$branch\""
-  done
 
-  # pull at first to check on merged heads
-  evalcall git pull --ff-only "\"$remote\"" -- $refs_cmdline || return
+    # pull at first to check on merged heads
+    call git pull --ff-only "$remote" -- "$branch" || return
+  done
 
   local to_remote
 
