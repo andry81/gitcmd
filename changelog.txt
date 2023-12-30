@@ -1,4 +1,7 @@
 2023.12.30:
+* changed: git_unmirror_refs.bat: moved from `contools` project
+
+2023.12.30:
 * fixed: git_pull_remote*.sh: execution fixup
 * changed: git_sync_remotes.sh, git_pull_remote*.sh: replaced `git pull` by `git fetch` to avoid checkout of not current branches
 
@@ -145,7 +148,8 @@
 * new: git_filter_branch_cleanup.sh: added `git_filter_branch_cleanup.sh` script to cleanup artefacts after branch filtering with the `git_filter_branch_user.sh` script execution
 
 2023.02.26:
-* new: git_unmirror_refs.sh: added `git_unmirror_refs.sh` script to unmirror mirrored remote repositories (port of `git_unmirror_refs.bat` script from `contools` project)
+* new: git_unmirror_refs.bat: added `git_unmirror_refs.bat` script to unmirror mirrored remote repositories
+* new: git_unmirror_refs.sh: added `git_unmirror_refs.sh` script to unmirror mirrored remote repositories (port of `git_unmirror_refs.bat` script)
 * changed: git_filter_branch_user.sh: rewrited for more accurate user match
 * changed: README_EN.txt: description and usage examples is moved into the scripts
 
