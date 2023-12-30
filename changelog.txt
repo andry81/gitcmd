@@ -1,4 +1,8 @@
 2023.12.30:
+* new: git_pull_remote_all.sh: added script to pull all branches from a remote
+* new: git_pull_remotes.sh: added script to pull all remotes
+
+2023.12.30:
 * changed: git_sync_remotes.sh: always pull and push current branch at first
 
 2023.12.28:
@@ -11,7 +15,7 @@
 * fixed: git_sync_remotes.sh: git error `fatal: Cannot fast-forward to multiple branches.`
 
 2023.12.25:
-* new: git_sync_remotes.sh: add script to pull local branches from the input remote and push them into the list of remotes
+* new: git_sync_remotes.sh: added script to pull local branches from the input remote and push them into the list of remotes
 
 2023.12.24:
 * new: extracted scripts and changelog file from `tacklelib` project
