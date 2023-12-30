@@ -124,10 +124,20 @@ function git_sync_remotes()
   fi
 
   if (( ! ${#branches[@]} )); then
+    local current_branch
     i=0
     while IFS=$'\r\n' read -r arg; do
-      branches[i++]="${arg:2}"
+      if [[ "${arg:0:1}" != '*' ]]; then
+        branches[i++]="${arg:2}"
+      else
+        current_branch="${arg:2}"
+      fi
     done < <(git branch --no-color)
+
+    # current branch at first
+    if [[ -n "$current_branch" ]]; then
+      branches=("$current_branch" "${branches[@]}")
+    fi
   fi
 
   if [[ "$arg" == '//' ]]; then

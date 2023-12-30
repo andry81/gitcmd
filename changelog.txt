@@ -1,3 +1,6 @@
+2023.12.30:
+* changed: git_sync_remotes.sh: always pull and push current branch at first
+
 2023.12.28:
 * new: git_sync_remotes.sh: added `<push-cmd-line>` argument list to use the rest of command line in each push command
 
