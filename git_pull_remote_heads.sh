@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # Description:
-#   Script to pull all branches from a remote.
+#   Script to pull all branches from a remote with the fast-foward merge only.
 
 # Usage:
-#   git_pull_remotes.sh <remote> [// <pull-cmd-line>]
+#   git_pull_remotes.sh <remote> [// <fetch-cmd-line>]
 #
 #   //:
 #     Separator to stop parse flags or previous command line argument list.
@@ -12,8 +12,8 @@
 #   <remote>:
 #     Remote to pull from.
 #
-#   <pull-cmd-line>:
-#     The rest of command line passed to each `git pull ...` command.
+#   <fetch-cmd-line>:
+#     The rest of command line passed to each `git fetch ...` command.
 
 # NOTE:
 #   You must use `GIT_SSH` variable to pass the path to plink agent if want to
@@ -53,40 +53,43 @@ function git_pull_remote_all()
   shift
 
   local IFS
-  local hash
-  local ref
-  local i
   local next_cmdline=0
 
   local refspecs=()
 
   # read remote branches
+  local branch
+  local hash
+  local ref
+  local i=0
 
-  i=0
   while IFS=$' \t\r\n' read -r hash ref; do
-    refspecs[i++]="${ref#refs/heads/}:$ref"
+    branch="${ref#refs/heads/}"
+    refspecs[i++]="$ref:$branch"
   done < <(git ls-remote --heads "$remote")
+
+  local arg="$1"
 
   if [[ "$arg" == '//' ]]; then
     shift
   fi
 
-  # read <pull-cmd-line>
-  next_cmdline=0
+  # read <fetch-cmd-line>
+  local next_cmdline=0
 
   local num_args=${#@}
-  local pull_cmdline
+  local fetch_cmdline
 
   for (( i=0; i < num_args; i++ )); do
-    arg="$1"
+    local arg="$1"
+
+    if [[ "${arg//[$' \t']/}" == "$arg" ]]; then
+      fetch_cmdline="$fetch_cmdline ${arg//\$/\\\$}"
+    else
+      fetch_cmdline="$fetch_cmdline \"${arg//\$/\\\$}\""
+    fi
 
     shift
-
-    if [[ "${arg//[ \t]/}" == "$arg" ]]; then
-      pull_cmdline="$pull_cmdline ${arg//\$/\\\$}"
-    else
-      pull_cmdline="$pull_cmdline \"${arg//\$/\\\$}\""
-    fi
   done
 
   local refspec
@@ -96,7 +99,8 @@ function git_pull_remote_all()
   #   `fatal: Cannot fast-forward to multiple branches.`
   #
   for refspec in "${refspecs[@]}"; do
-    evalcall git pull$pull_cmdline "'$remote'" -- "'$refspec'"
+    # fetch does use the fast-forward merge only
+    evalcall git fetch$fetch_cmdline "'$remote'" -- "'$refspec'"
   done
 }
 

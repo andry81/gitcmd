@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # Description:
-#   Script to pull either all or list of remotes.
+#   Script to pull either all or list of remotes with the fast-foward merge only.
 
 # Usage:
-#   git_pull_remotes.sh <default-remote> [from-remote1 [from-remote2 [...from-remoteN]]] [: branch1 [branch2 [...branchN]]] [// <pull-cmd-line>]
+#   git_pull_remotes.sh <default-remote> [from-remote1 [from-remote2 [...from-remoteN]]] [: branch1 [branch2 [...branchN]]] [// <fetch-cmd-line>]
 #
 #   //:
 #     Separator to stop parse flags or previous command line argument list.
@@ -20,8 +20,8 @@
 #     Branch to pull from <from-remote>.
 #     If not defined, then `git branch` is used instead.
 #
-#   <pull-cmd-line>:
-#     The rest of command line passed to each `git pull ...` command.
+#   <fetch-cmd-line>:
+#     The rest of command line passed to each `git fetch ...` command.
 
 # NOTE:
 #   You must use `GIT_SSH` variable to pass the path to plink agent if want to
@@ -62,17 +62,13 @@ function git_pull_remotes()
 
   local IFS
   local from_remotes=()
-  local arg
-  local i
   local next_cmdline=0
 
   # read output remotes
   local num_args=${#@}
 
   for (( i=0; i < num_args; i++ )); do
-    arg="$1"
-
-    shift
+    local arg="$1"
 
     if [[ "$arg" == ':' ]]; then
       break
@@ -82,20 +78,23 @@ function git_pull_remotes()
     fi
 
     from_remotes[i]="$arg"
+
+    shift
   done
 
   if (( ! ${#from_remotes[@]} )); then
     local has_default_remote=0
+    local local_remote
 
-    i=0
-    while IFS=$'\r\n' read -r arg; do
+    local i=0
+    while IFS=$'\r\n' read -r local_remote; do
       # if has, then move to the beginning
-      if [[ "$arg" == "$default_remote" ]]; then
+      if [[ "$local_remote" == "$default_remote" ]]; then
         has_default_remote=1
         continue
       fi
 
-      from_remotes[i++]="$arg"
+      from_remotes[i++]="$local_remote"
     done < <(git remote)
 
     if (( has_default_remote )); then
@@ -105,14 +104,16 @@ function git_pull_remotes()
 
   local branches=()
 
-  # read input branches
-  local num_args=${#@}
-
   if (( ! next_cmdline )); then
-    for (( i=0; i < num_args; i++ )); do
-      arg="$1"
-
+    # read output branches
+    if [[ "$arg" == ':' ]]; then
       shift
+    fi
+
+    local num_args=${#@}
+
+    for (( i=0; i < num_args; i++ )); do
+      local arg="$1"
 
       if [[ "$arg" == '//' ]]; then
         next_cmdline=1
@@ -120,17 +121,21 @@ function git_pull_remotes()
       fi
 
       branches[i]="$arg"
+
+      shift
     done
   fi
 
   if (( ! ${#branches[@]} )); then
     local current_branch
-    i=0
-    while IFS=$'\r\n' read -r arg; do
-      if [[ "${arg:0:1}" != '*' ]]; then
-        branches[i++]="${arg:2}"
+    local local_branch
+
+    local i=0
+    while IFS=$'\r\n' read -r local_branch; do
+      if [[ "${local_branch:0:1}" != '*' ]]; then
+        branches[i++]="${local_branch:2}"
       else
-        current_branch="${arg:2}"
+        current_branch="${local_branch:2}"
       fi
     done < <(git branch --no-color)
 
@@ -144,22 +149,28 @@ function git_pull_remotes()
     shift
   fi
 
-  # read <pull-cmd-line>
-  next_cmdline=0
+  # CAUTION:
+  #   We should not call the pull here directly, because it involves an evential merge with the current branch.
+  #   On another hand we can not checkout each branch because might want to keep a working state with the current branch.
+  #   To pull all branches and merge one remote with one local, we must use fetch command with the fast-forward merge or rebase.
+  #   This will avoid accidental merge with the current branch and will kept the current branch as checked out.
+
+  # read <fetch-cmd-line>
+  local next_cmdline=0
 
   local num_args=${#@}
-  local pull_cmdline
+  local fetch_cmdline
 
   for (( i=0; i < num_args; i++ )); do
-    arg="$1"
+    local arg="$1"
+
+    if [[ "${arg//[$' \t']/}" == "$arg" ]]; then
+      fetch_cmdline="$fetch_cmdline ${arg//\$/\\\$}"
+    else
+      fetch_cmdline="$fetch_cmdline \"${arg//\$/\\\$}\""
+    fi
 
     shift
-
-    if [[ "${arg//[ \t]/}" == "$arg" ]]; then
-      pull_cmdline="$pull_cmdline ${arg//\$/\\\$}"
-    else
-      pull_cmdline="$pull_cmdline \"${arg//\$/\\\$}\""
-    fi
   done
 
   local from_remote
@@ -171,7 +182,8 @@ function git_pull_remotes()
     #   `fatal: Cannot fast-forward to multiple branches.`
     #
     for branch in "${branches[@]}"; do
-      evalcall git pull$pull_cmdline "'$from_remote'" -- "'$branch'"
+      # fetch does use the fast-forward merge only
+      evalcall git fetch$fetch_cmdline "'$from_remote'" -- "'refs/heads/$branch:$branch'"
     done
   done
 }

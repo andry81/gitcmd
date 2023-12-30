@@ -1,4 +1,8 @@
 2023.12.30:
+* fixed: git_pull_remote*.sh: execution fixup
+* changed: git_sync_remotes.sh, git_pull_remote*.sh: replaced `git pull` by `git fetch` to avoid checkout of not current branches
+
+2023.12.30:
 * new: git_pull_remote_all.sh: added script to pull all branches from a remote
 * new: git_pull_remotes.sh: added script to pull all remotes
 

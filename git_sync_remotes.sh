@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # Description:
-#   Script to synchronize one remote with other remotes in a working copy.
+#   Script to synchronize one remote with other remotes using either all or list of remotes.
+#   Before the push all branches does the current branch pull with the fast-forward merge only.
 
 # Usage:
 #   git_sync_remotes.sh <from-remote> [to-remote1 [to-remote2 [...to-remoteN]]] [: branch1 [branch2 [...branchN]]] [// <push-cmd-line>]
@@ -62,17 +63,13 @@ function git_sync_remotes()
 
   local IFS
   local to_remotes=()
-  local arg
-  local i
   local next_cmdline=0
 
   # read output remotes
   local num_args=${#@}
 
   for (( i=0; i < num_args; i++ )); do
-    arg="$1"
-
-    shift
+    local arg="$1"
 
     if [[ "$arg" == ':' ]]; then
       break
@@ -82,20 +79,23 @@ function git_sync_remotes()
     fi
 
     to_remotes[i]="$arg"
+
+    shift
   done
 
   if (( ! ${#to_remotes[@]} )); then
     local has_input_remote=0
+    local local_remote
 
-    i=0
-    while IFS=$'\r\n' read -r arg; do
+    local i=0
+    while IFS=$'\r\n' read -r local_remote; do
       # if has, then move to the beginning
-      if [[ "$arg" == "$remote" ]]; then
+      if [[ "$local_remote" == "$remote" ]]; then
         has_input_remote=1
         continue
       fi
 
-      to_remotes[i++]="$arg"
+      to_remotes[i++]="$local_remote"
     done < <(git remote)
 
     if (( has_input_remote )); then
@@ -105,14 +105,16 @@ function git_sync_remotes()
 
   local branches=()
 
-  # read output branches
-  local num_args=${#@}
-
   if (( ! next_cmdline )); then
-    for (( i=0; i < num_args; i++ )); do
-      arg="$1"
-
+    # read output branches
+    if [[ "$arg" == ':' ]]; then
       shift
+    fi
+
+    local num_args=${#@}
+
+    for (( i=0; i < num_args; i++ )); do
+      local arg="$1"
 
       if [[ "$arg" == '//' ]]; then
         next_cmdline=1
@@ -120,17 +122,21 @@ function git_sync_remotes()
       fi
 
       branches[i]="$arg"
+
+      shift
     done
   fi
 
   if (( ! ${#branches[@]} )); then
     local current_branch
-    i=0
-    while IFS=$'\r\n' read -r arg; do
-      if [[ "${arg:0:1}" != '*' ]]; then
-        branches[i++]="${arg:2}"
+    local local_branch
+
+    local i=0
+    while IFS=$'\r\n' read -r local_branch; do
+      if [[ "${local_branch:0:1}" != '*' ]]; then
+        branches[i++]="${local_branch:2}"
       else
-        current_branch="${arg:2}"
+        current_branch="${local_branch:2}"
       fi
     done < <(git branch --no-color)
 
@@ -144,22 +150,28 @@ function git_sync_remotes()
     shift
   fi
 
+  # CAUTION:
+  #   We should not call the pull here directly, because it involves an evential merge with the current branch.
+  #   On another hand we can not checkout each branch because might want to keep a working state with the current branch.
+  #   To pull all branches and merge one remote with one local, we must use fetch command with the fast-forward merge or rebase.
+  #   This will avoid accidental merge with the current branch and will kept the current branch as checked out.
+
   # read <push-cmd-line>
-  next_cmdline=0
+  local next_cmdline=0
 
   local num_args=${#@}
   local push_cmdline
 
   for (( i=0; i < num_args; i++ )); do
-    arg="$1"
+    local arg="$1"
 
-    shift
-
-    if [[ "${arg//[ \t]/}" == "$arg" ]]; then
+    if [[ "${arg//[$' \t']/}" == "$arg" ]]; then
       push_cmdline="$push_cmdline ${arg//\$/\\\$}"
     else
       push_cmdline="$push_cmdline \"${arg//\$/\\\$}\""
     fi
+
+    shift
   done
 
   local refs_cmdline
@@ -172,13 +184,14 @@ function git_sync_remotes()
   for branch in "${branches[@]}"; do
     refs_cmdline="$refs_cmdline${refs_cmdline:+ }\"$branch\""
 
-    # pull at first to check on merged heads
-    call git pull --ff-only "$remote" -- "$branch" || return
+    # fetch does use the fast-forward merge only
+    call git fetch "$remote" -- "refs/heads/$branch:$branch"
   done
 
   local to_remote
 
   for to_remote in "${to_remotes[@]}"; do
+    # additionally this checks on merged heads
     evalcall git push --tags$push_cmdline "'$to_remote'" -- $refs_cmdline
   done
 }
