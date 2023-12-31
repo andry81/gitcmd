@@ -41,8 +41,8 @@ function git_pull_remote_heads()
   local remote="$1"
 
   if [[ -z "$remote" ]]; then
-    echo "$0: error: remote is empty"
-    exit 255
+    echo "$0: error: remote is empty" >&2
+    return 255
   fi
 
   # WORKAROUND:
@@ -67,6 +67,11 @@ function git_pull_remote_heads()
     branch="${ref#refs/heads/}"
     refspecs[i++]="$ref:$branch"
   done < <(git ls-remote --heads "$remote")
+
+  if (( ! ${#refspecs[@]} )); then
+    echo "$0: error: there is no remote heads" >&2
+    return 128
+  fi
 
   local arg="$1"
 
@@ -101,6 +106,7 @@ function git_pull_remote_heads()
   for refspec in "${refspecs[@]}"; do
     # fetch does use the fast-forward merge only
     evalcall git fetch$fetch_cmdline "'$remote'" -- "'$refspec'"
+    echo
   done
 }
 

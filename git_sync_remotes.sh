@@ -5,10 +5,14 @@
 #   Before the push all branches does the current branch pull with the fast-forward merge only.
 
 # Usage:
-#   git_sync_remotes.sh <from-remote> [to-remote1 [to-remote2 [...to-remoteN]]] [: branch1 [branch2 [...branchN]]] [// <push-cmd-line>]
+#   git_sync_remotes.sh <flags> [//] <from-remote> [to-remote1 [to-remote2 [...to-remoteN]]] [: branch1 [branch2 [...branchN]]] [// <push-cmd-line>]
 #
 #   //:
 #     Separator to stop parse flags or previous command line argument list.
+#
+#   <flags>:
+#     --current-branch:
+#       Sync a current branch only.
 #
 #   <from-remote>:
 #     Remote to pull from.
@@ -47,11 +51,47 @@ function call()
 
 function git_sync_remotes()
 {
+  local flag="$1"
+
+  local flag_current_branch=0
+  local skip_flag
+
+  while [[ "${flag:0:1}" == '-' ]]; do
+    flag="${flag:1}"
+    skip_flag=0
+
+    if [[ "$flag" == '-current-branch' ]]; then
+      flag_current_branch=1
+      skip_flag=1
+    elif [[ "${flag:0:1}" == '-' ]]; then
+      echo "$0: error: invalid flag: \`$flag\`" >&2
+      return 255
+    fi
+
+    if (( ! skip_flag )); then
+      #if [[ "${flag//f/}" != "$flag" ]]; then
+      #  flag_f=1
+      #else
+      #  echo "$0: error: invalid flag: \`${flag:0:1}\`" >&2
+      #  return 255
+      #fi
+      :
+    fi
+
+    shift
+
+    flag="$1"
+  done
+
+  if [[ "$1" == '//' ]]; then
+    shift
+  fi
+
   local remote="$1"
 
   if [[ -z "$remote" ]]; then
-    echo "$0: error: remote is empty"
-    exit 255
+    echo "$0: error: remote is empty" >&2
+    return 255
   fi
 
   # WORKAROUND:
@@ -121,20 +161,24 @@ function git_sync_remotes()
         break
       fi
 
-      branches[i]="$arg"
+      if (( ! flag_current_branch )); then
+        branches[i]="$arg"
+      fi
 
       shift
     done
   fi
 
-  if (( ! ${#branches[@]} )); then
+  if (( flag_current_branch || ! ${#branches[@]} )); then
     local current_branch
     local local_branch
 
     local i=0
     while IFS=$'\r\n' read -r local_branch; do
       if [[ "${local_branch:0:1}" != '*' ]]; then
-        branches[i++]="${local_branch:2}"
+        if (( ! flag_current_branch )); then
+          branches[i++]="${local_branch:2}"
+        fi
       else
         current_branch="${local_branch:2}"
       fi
@@ -144,6 +188,11 @@ function git_sync_remotes()
     if [[ -n "$current_branch" ]]; then
       branches=("$current_branch" "${branches[@]}")
     fi
+  fi
+
+  if (( ! ${#branches[@]} )); then
+    echo "$0: error: there is no branches" >&2
+    return 128
   fi
 
   if [[ "$arg" == '//' ]]; then
@@ -186,6 +235,7 @@ function git_sync_remotes()
 
     # fetch does use the fast-forward merge only
     call git fetch "$remote" -- "refs/heads/$branch:$branch"
+    echo
   done
 
   local to_remote
@@ -193,6 +243,7 @@ function git_sync_remotes()
   for to_remote in "${to_remotes[@]}"; do
     # additionally this checks on merged heads
     evalcall git push --tags$push_cmdline "'$to_remote'" -- $refs_cmdline
+    echo
   done
 }
 

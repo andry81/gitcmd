@@ -49,8 +49,8 @@ function git_pull_remotes()
   local default_remote="$1"
 
   if [[ -z "$default_remote" ]]; then
-    echo "$0: error: default remote is empty"
-    exit 255
+    echo "$0: error: default remote is empty" >&2
+    return 255
   fi
 
   # WORKAROUND:
@@ -145,6 +145,11 @@ function git_pull_remotes()
     fi
   fi
 
+  if (( ! ${#branches[@]} )); then
+    echo "$0: error: there is no branches" >&2
+    return 128
+  fi
+
   if [[ "$arg" == '//' ]]; then
     shift
   fi
@@ -184,6 +189,7 @@ function git_pull_remotes()
     for branch in "${branches[@]}"; do
       # fetch does use the fast-forward merge only
       evalcall git fetch$fetch_cmdline "'$from_remote'" -- "'refs/heads/$branch:$branch'"
+      echo
     done
   done
 }
