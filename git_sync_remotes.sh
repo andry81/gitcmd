@@ -197,7 +197,7 @@ function git_sync_remotes()
 }
 
 # shortcut
-function git_sy_rs()
+function git_syn_rs()
 {
   git_sync_remotes "$@"
 }

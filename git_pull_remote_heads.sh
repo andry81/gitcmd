@@ -36,7 +36,7 @@ function call()
   "$@"
 }
 
-function git_pull_remote_all()
+function git_pull_remote_heads()
 {
   local remote="$1"
 
@@ -105,14 +105,14 @@ function git_pull_remote_all()
 }
 
 # shortcut
-function git_pu_r_a()
+function git_pu_r_hs()
 {
-  git_pull_remote_all "$@"
+  git_pull_remote_heads "$@"
 }
 
 if [[ -z "$BASH_LINENO" || BASH_LINENO[0] -eq 0 ]]; then
   # Script was not included, then execute it.
-  git_pull_remote_all "$@"
+  git_pull_remote_heads "$@"
 fi
 
 fi

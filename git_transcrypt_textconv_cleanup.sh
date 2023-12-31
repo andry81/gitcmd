@@ -26,7 +26,7 @@ function git_transcrypt_cleanup()
 }
 
 # shortcut
-function git_trcr_cl()
+function git_trscr_cl()
 {
   git_transcrypt_cleanup "$@"
 }

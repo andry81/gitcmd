@@ -71,7 +71,7 @@ function git_bare_config_allow_rewrite()
 }
 
 # shortcut
-function git_bc_arw()
+function git_bc_al_rw()
 {
   git_bare_config_allow_rewrite "$@"
 }

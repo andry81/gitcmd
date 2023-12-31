@@ -245,7 +245,7 @@ git rm'"$rm_bare_flags"' "${path_arr[@]}"' "$@"
 }
 
 # shortcut
-function git_fb_rpl()
+function git_flb_rm_pl()
 {
   git_filter_branch_remove_path_list "$@"
 }

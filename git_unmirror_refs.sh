@@ -80,7 +80,7 @@ function git_unmirror_refs()
 }
 
 # shortcut
-function git_ur()
+function git_unm_r()
 {
   git_unmirror_refs "$@"
 }

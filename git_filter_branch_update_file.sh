@@ -156,7 +156,7 @@ cp$cp_bare_flags \"$local_path\" \"$sourcetree_path_dir\" && git update-index --
 }
 
 # shortcut
-function git_fb_uf()
+function git_flb_up_f()
 {
   git_filter_branch_update_file "$@"
 }

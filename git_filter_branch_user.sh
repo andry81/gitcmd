@@ -103,7 +103,7 @@ function git_filter_branch_user()
 }
 
 # shortcut
-function git_fb_u()
+function git_flb_u()
 {
   git_filter_branch_user "$@"
 }

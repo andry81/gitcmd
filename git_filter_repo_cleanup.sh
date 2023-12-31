@@ -27,7 +27,7 @@ function git_filter_repo_cleanup()
 }
 
 # shortcut
-function git_fr_cl()
+function git_flr_cl()
 {
   git_filter_repo_cleanup "$@"
 }

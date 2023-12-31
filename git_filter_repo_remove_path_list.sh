@@ -106,7 +106,7 @@ function git_filter_repo_remove_path_list()
 }
 
 # shortcut
-function git_fr_rpl()
+function git_flr_rm_pl()
 {
   git_filter_repo_remove_path_list "$@"
 }

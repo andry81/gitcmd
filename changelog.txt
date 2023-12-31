@@ -1,4 +1,7 @@
 2023.12.31:
+* refactor: shortcut functions rename
+
+2023.12.31:
 * new: git_transcrypt_textconv_cleanup.sh: script to complete the last operation and cleanup artefacts after using Git transcrypt extension (https://github.com/elasticdog/transcrypt)
 
 2023.12.30:

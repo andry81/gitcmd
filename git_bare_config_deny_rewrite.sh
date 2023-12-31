@@ -71,7 +71,7 @@ function git_bare_config_deny_rewrite()
 }
 
 # shortcut
-function git_bc_drw()
+function git_bc_de_rw()
 {
   git_bare_config_deny_rewrite "$@"
 }

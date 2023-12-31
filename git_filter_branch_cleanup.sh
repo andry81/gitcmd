@@ -40,7 +40,7 @@ function git_filter_branch_cleanup()
 }
 
 # shortcut
-function git_fb_cl()
+function git_flb_cl()
 {
   git_filter_branch_cleanup "$@"
 }

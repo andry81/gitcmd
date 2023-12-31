@@ -145,7 +145,7 @@ commit.message = msg_new.encode("utf-8")
 }
 
 # shortcut
-function git_shcm_flr()
+function git_flr_rep_cm()
 {
   git_filter_repo_replace_commit_msg "$@"
 }

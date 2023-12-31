@@ -176,7 +176,7 @@ function git_gen_revlist_commit_hashes()
 }
 
 # shortcut
-function git_grlchs()
+function git_gen_rvl_c_hs()
 {
   git_gen_revlist_commit_hashes "$@"
 }

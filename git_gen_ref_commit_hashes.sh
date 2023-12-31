@@ -160,7 +160,7 @@ function git_gen_ref_commit_hashes()
 }
 
 # shortcut
-function git_grchs()
+function git_gen_r_c_hs()
 {
   git_gen_ref_commit_hashes "$@"
 }

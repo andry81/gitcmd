@@ -107,7 +107,7 @@ function git_gen_commit_hash()
 }
 
 # shortcut
-function git_gch()
+function git_gen_c_h()
 {
   git_gen_commit_hash "$@"
 }

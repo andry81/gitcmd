@@ -213,7 +213,7 @@ function git_filter_branch_update_file_text()
 }
 
 # shortcut
-function git_fr_uft()
+function git_flb_up_f_t()
 {
   git_filter_branch_update_file_text "$@"
 }

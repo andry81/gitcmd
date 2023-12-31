@@ -240,7 +240,7 @@ function git_filter_branch_remove_path()
 }
 
 # shortcut
-function git_fb_rp()
+function git_flb_rm_p()
 {
   git_filter_branch_remove_path "$@"
 }
