@@ -86,7 +86,7 @@ function git_gen_commit_hash()
   local IFS
 
   objtype="$(git cat-file -t "$obj")"
-  hashsum="$(echo -ne "$objtype $(git cat-file -s "$obj")\0$(git cat-file -p "$obj")" | $hashcmd "${hashcmdline[@]}")"
+  hashsum="$(echo -ne "$objtype $(git cat-file -s "$obj")\0$(git cat-file -p "$obj")\n" | $hashcmd "${hashcmdline[@]}")"
 
   IFS=$'\t ' read -r hashvalue suffix <<< "$hashsum"
 
@@ -97,7 +97,7 @@ function git_gen_commit_hash()
       IFS=$'\t ' read -r parenthash suffix <<< "$line"
 
       objtype="$(git cat-file -t "$parenthash")"
-      hashsum="$(echo -ne "$objtype $(git cat-file -s "$parenthash")\0$(git cat-file -p "$parenthash")" | $hashcmd "${hashcmdline[@]}")"
+      hashsum="$(echo -ne "$objtype $(git cat-file -s "$parenthash")\0$(git cat-file -p "$parenthash")\n" | $hashcmd "${hashcmdline[@]}")"
 
       IFS=$'\t ' read -r hashvalue suffix <<< "$hashsum"
 

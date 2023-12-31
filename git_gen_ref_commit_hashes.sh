@@ -117,7 +117,7 @@ function git_gen_ref_commit_hashes()
     IFS=$'\t ' read -r refhash ref <<< "$line"
 
     objtype="$(git cat-file -t "$refhash")"
-    hashsum="$(echo -ne "$objtype $(git cat-file -s "$refhash")\0$(git cat-file -p "$refhash")" | $hashcmd "${hashcmdline[@]}")"
+    hashsum="$(echo -ne "$objtype $(git cat-file -s "$refhash")\0$(git cat-file -p "$refhash")\n" | $hashcmd "${hashcmdline[@]}")"
 
     IFS=$'\t ' read -r hashvalue suffix <<< "$hashsum"
 
@@ -133,7 +133,7 @@ function git_gen_ref_commit_hashes()
           IFS=$'\t ' read -r parenthash suffix <<< "$line"
 
           objtype="$(git cat-file -t "$parenthash")"
-          hashsum="$(echo -ne "$objtype $(git cat-file -s "$parenthash")\0$(git cat-file -p "$parenthash")" | $hashcmd "${hashcmdline[@]}")"
+          hashsum="$(echo -ne "$objtype $(git cat-file -s "$parenthash")\0$(git cat-file -p "$parenthash")\n" | $hashcmd "${hashcmdline[@]}")"
 
           IFS=$'\t ' read -r hashvalue suffix <<< "$hashsum"
 

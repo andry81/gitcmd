@@ -156,7 +156,7 @@ function git_gen_revlist_commit_hashes()
     IFS=$'\t ' read -r refhash suffix <<< "$line"
 
     objtype="$(git cat-file -t "$refhash")"
-    hashsum="$(echo -ne "$objtype $(git cat-file -s "$refhash")\0$(git cat-file -p "$refhash")" | $hashcmd "${hashcmdline[@]}")"
+    hashsum="$(echo -ne "$objtype $(git cat-file -s "$refhash")\0$(git cat-file -p "$refhash")\n" | $hashcmd "${hashcmdline[@]}")"
 
     IFS=$'\t ' read -r hashvalue suffix <<< "$hashsum"
 

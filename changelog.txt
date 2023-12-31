@@ -1,4 +1,7 @@
 2023.12.31:
+* fixed: git_gen_*.sh: execution fixup, somehow missed trailing line return
+
+2023.12.31:
 * refactor: shortcut functions rename
 
 2023.12.31:
