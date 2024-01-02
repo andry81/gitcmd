@@ -4,7 +4,7 @@
 #   Script to cleanup artefacts after using `git filter-branch` command.
 
 # Usage:
-#   git_filter_branch_cleanup.sh
+#   git_cleanup_filter_branch.sh
 #
 
 # Script both for execution and inclusion.
@@ -17,7 +17,7 @@ function call()
   "$@"
 }
 
-function git_filter_branch_cleanup()
+function git_cleanup_filter_branch()
 {
   # print all refs
   call git show-ref || return 255
@@ -40,14 +40,14 @@ function git_filter_branch_cleanup()
 }
 
 # shortcut
-function git_flb_cl()
+function git_cl_flb()
 {
-  git_filter_branch_cleanup "$@"
+  git_cleanup_filter_branch "$@"
 }
 
 if [[ -z "$BASH_LINENO" || BASH_LINENO[0] -eq 0 ]]; then
   # Script was not included, then execute it.
-  git_filter_branch_cleanup "$@"
+  git_cleanup_filter_branch "$@"
 fi
 
 fi

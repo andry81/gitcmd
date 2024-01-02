@@ -67,7 +67,7 @@
 #     new refs and keep the old ones around. Use with caution.
 
 # NOTE:
-#   You must use `git_filter_repo_cleanup.sh` script to complete the
+#   You must use `git_cleanup_filter_repo.sh` script to complete the
 #   operation and cleanup the repository from intermediate references.
 
 # Script both for execution and inclusion.

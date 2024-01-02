@@ -87,7 +87,7 @@
 #   rewrite each next child commit before call to `git replace --graft ...`.
 
 # NOTE:
-#   You must use `git_filter_branch_cleanup.sh` script to cleanup the
+#   You must use `git_cleanup_filter_branch.sh` script to cleanup the
 #   repository from intermediate references.
 
 # Based on:

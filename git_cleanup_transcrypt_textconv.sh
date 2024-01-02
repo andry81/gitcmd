@@ -6,7 +6,7 @@
 #   https://github.com/elasticdog/transcrypt
 
 # Usage:
-#   git_transcrypt_textconv_cleanup.sh
+#   git_cleanup_transcrypt_textconv.sh
 #
 
 # Script both for execution and inclusion.
@@ -19,21 +19,21 @@ function evalcall()
   eval "$@"
 }
 
-function git_transcrypt_cleanup()
+function git_cleanup_transcrypt_textconv()
 {
   # based on: https://stackoverflow.com/questions/46229291/in-git-how-can-i-efficiently-delete-all-refs-matching-a-pattern/46229416#46229416
   evalcall "git for-each-ref --format='delete %(refname)' refs/notes/textconv/crypt | git update-ref --stdin"
 }
 
 # shortcut
-function git_trscr_cl()
+function git_cl_trscr_tc()
 {
-  git_transcrypt_cleanup "$@"
+  git_cleanup_transcrypt_textconv "$@"
 }
 
 if [[ -z "$BASH_LINENO" || BASH_LINENO[0] -eq 0 ]]; then
   # Script was not included, then execute it.
-  git_transcrypt_cleanup "$@"
+  git_cleanup_transcrypt_textconv "$@"
 fi
 
 fi

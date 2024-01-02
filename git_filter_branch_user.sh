@@ -30,7 +30,7 @@
 #
 
 # NOTE:
-#   You must use `git_filter_branch_cleanup.sh` script to complete the
+#   You must use `git_cleanup_filter_branch.sh` script to complete the
 #   operation and cleanup the repository from intermediate references.
 
 # Script both for execution and inclusion.

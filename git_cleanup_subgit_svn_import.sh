@@ -6,7 +6,7 @@
 #   https://subgit.com/documentation/howto.html#import
 
 # Usage:
-#   git_subgit_svn_import_cleanup.sh
+#   git_cleanup_subgit_svn_import.sh
 #
 
 # Script both for execution and inclusion.
@@ -19,7 +19,7 @@ function evalcall()
   eval "$@"
 }
 
-function git_subgit_svn_import_cleanup()
+function git_cleanup_subgit_svn_import()
 {
   # based on: https://stackoverflow.com/questions/46229291/in-git-how-can-i-efficiently-delete-all-refs-matching-a-pattern/46229416#46229416
   evalcall "git for-each-ref --format='delete %(refname)' refs/notes/commits | git update-ref --stdin"
@@ -29,14 +29,14 @@ function git_subgit_svn_import_cleanup()
 }
 
 # shortcut
-function git_sg_si_cl()
+function git_cl_sg_si()
 {
-  git_subgit_svn_import_cleanup "$@"
+  git_cleanup_subgit_svn_import "$@"
 }
 
 if [[ -z "$BASH_LINENO" || BASH_LINENO[0] -eq 0 ]]; then
   # Script was not included, then execute it.
-  git_subgit_svn_import_cleanup "$@"
+  git_cleanup_subgit_svn_import "$@"
 fi
 
 fi

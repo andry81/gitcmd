@@ -6,7 +6,7 @@
 #   https://subgit.com/documentation/howto.html#import
 
 # Usage:
-#   git_subgit_svn_import_cleanup_remote.sh <remote>
+#   git_cleanup_subgit_svn_import_remote.sh <remote>
 #
 
 # Script both for execution and inclusion.
@@ -37,7 +37,7 @@ function evalcallxargs()
   done
 }
 
-function git_subgit_svn_import_cleanup_remote()
+function git_cleanup_subgit_svn_import_remote()
 {
   local remote="$1"
 
@@ -59,14 +59,14 @@ function git_subgit_svn_import_cleanup_remote()
 }
 
 # shortcut
-function git_sg_si_cl_r()
+function git_cl_sg_si_r()
 {
-  git_subgit_svn_import_cleanup_remote "$@"
+  git_cleanup_subgit_svn_import_remote "$@"
 }
 
 if [[ -z "$BASH_LINENO" || BASH_LINENO[0] -eq 0 ]]; then
   # Script was not included, then execute it.
-  git_subgit_svn_import_cleanup_remote "$@"
+  git_cleanup_subgit_svn_import_remote "$@"
 fi
 
 fi

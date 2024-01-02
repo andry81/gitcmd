@@ -97,7 +97,7 @@
 #   have to limit the `rev-list` parameter by that commit.
 
 # NOTE:
-#   You must use `git_filter_branch_cleanup.sh` script to cleanup the
+#   You must use `git_cleanup_filter_branch.sh` script to cleanup the
 #   repository from intermediate references.
 
 # Script both for execution and inclusion.

@@ -1,3 +1,6 @@
+2024.01.02:
+* refactor: rename `git_*_cleanup.sh` scripts to `git_cleanup_*.sh`
+
 2023.12.31:
 * fixed: git_sync_remotes.sh, git_pull_remote*.sh: minor fixup
 * new: git_sync_remotes.sh: added `--current-branch` flag to synchronize only a current branch
