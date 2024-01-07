@@ -23,13 +23,13 @@ https://en.wikipedia.org/wiki/MIT_License)
 -------------------------------------------------------------------------------
 Primary:
   * https://github.com/andry81/gitcmd/branches
-    https://github.com/andry81/gitcmd.git
+  * https://github.com/andry81/gitcmd.git
 First mirror:
   * https://sf.net/p/gitcmd/gitcmd/ci/master/tree
-    https://git.code.sf.net/p/gitcmd/gitcmd
+  * https://git.code.sf.net/p/gitcmd/gitcmd
 Second mirror:
   * https://gitlab.com/andry81/gitcmd/-/branches
-    https://gitlab.com/andry81/gitcmd.git
+  * https://gitlab.com/andry81/gitcmd.git
 
 -------------------------------------------------------------------------------
 4. AUTHOR

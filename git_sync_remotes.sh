@@ -242,7 +242,7 @@ function git_sync_remotes()
 
   for to_remote in "${to_remotes[@]}"; do
     # additionally this checks on merged heads
-    evalcall git push --tags$push_cmdline "'$to_remote'" -- $refs_cmdline
+    evalcall git push$push_cmdline "'$to_remote'" -- $refs_cmdline
     echo
   done
 }

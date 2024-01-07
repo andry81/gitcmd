@@ -1,3 +1,7 @@
+2024.01.07:
+* fixed: README_EN.txt: readme fixup
+* changed: git_sync_remotes.sh: removed implicit `--tags` argument from the push command line
+
 2024.01.02:
 * refactor: rename `git_*_cleanup.sh` scripts to `git_cleanup_*.sh`
 
