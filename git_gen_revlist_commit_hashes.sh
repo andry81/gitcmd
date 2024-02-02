@@ -150,7 +150,7 @@ function git_gen_revlist_commit_hashes()
 
   local IFS
 
-  IFS=$'\n\r'; for line in `git rev-list "${revlist_cmdline[@]}"`; do
+  IFS=$'\r\n'; for line in `git rev-list "${revlist_cmdline[@]}"`; do # IFS - with trim trailing line feeds
     print_empty_line=0
 
     IFS=$'\t ' read -r refhash suffix <<< "$line"

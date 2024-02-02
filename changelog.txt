@@ -1,3 +1,7 @@
+2024.02.02:
+* fixed: missed trim of trailing line feed characters
+* fixed: paths insensitive comparison in `detect_find` function
+
 2024.01.07:
 * fixed: README_EN.txt: readme fixup
 * changed: git_sync_remotes.sh: removed implicit `--tags` argument from the push command line

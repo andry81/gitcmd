@@ -93,7 +93,7 @@ function git_gen_commit_hash()
   echo "$hashvalue $(git rev-parse "$obj") $objtype $obj"
 
   if (( flag_print_parents )); then
-    IFS=$'\n\r'; for line in `git rev-parse "$obj^@"`; do
+    IFS=$'\r\n'; for line in `git rev-parse "$obj^@"`; do # IFS - with trim trailing line feeds
       IFS=$'\t ' read -r parenthash suffix <<< "$line"
 
       objtype="$(git cat-file -t "$parenthash")"

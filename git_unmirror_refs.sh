@@ -24,7 +24,7 @@ function git_unmirror_refs()
   echo ---
 
   # Pull to update local references and test on unmerged heads in the local.
-  IFS=$'\n\r'; for remote in `git remote 2>/dev/null`; do
+  IFS=$'\r\n'; for remote in `git remote 2>/dev/null`; do # IFS - with trim trailing line feeds
     call git pull "$remote" '*:*'
     echo ---
     echo
@@ -43,7 +43,7 @@ function git_unmirror_refs()
 
   # Remove all refs in all remotes to reset the mirror tracking:
   #   refs/remotes/REMOTE/BRANCH -> refs/remotes/REMOTE/BRANCH
-  IFS=$'\n\r'; for remote in `git remote 2>/dev/null`; do
+  IFS=$'\r\n'; for remote in `git remote 2>/dev/null`; do # IFS - with trim trailing line feeds
     [[ -z "$remote" ]] && continue
     git_push_cmdline=''
     IFS=$' \t'; while read -r hash ref; do
@@ -70,7 +70,7 @@ function git_unmirror_refs()
   echo
 
   # Pull to update local references and test on unmerged heads in the local.
-  IFS=$'\n\r'; for remote in `git remote 2>/dev/null`; do
+  IFS=$'\r\n'; for remote in `git remote 2>/dev/null`; do # IFS - with trim trailing line feeds
     call git pull "$remote" '*:*'
     echo ---
     echo

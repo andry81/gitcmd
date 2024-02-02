@@ -111,7 +111,7 @@ function git_gen_ref_commit_hashes()
 
   local IFS
 
-  IFS=$'\n\r'; for line in `git show-ref "${showref_cmdline[@]}"`; do
+  IFS=$'\r\n'; for line in `git show-ref "${showref_cmdline[@]}"`; do # IFS - with trim trailing line feeds
     print_empty_line=0
 
     IFS=$'\t ' read -r refhash ref <<< "$line"
@@ -127,7 +127,7 @@ function git_gen_ref_commit_hashes()
       if (( flag_print_parents )); then
         num_parents=0
 
-        IFS=$'\n\r'; for line in `git rev-parse "$refhash^@"`; do
+        IFS=$'\r\n'; for line in `git rev-parse "$refhash^@"`; do # IFS - with trim trailing line feeds
           (( num_parents++ ))
 
           IFS=$'\t ' read -r parenthash suffix <<< "$line"
