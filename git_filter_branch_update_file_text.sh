@@ -226,8 +226,8 @@ function git_filter_branch_update_file_text()
   # NOTE:
   #   `H;1h;\\\$!d;x;` reads portably whole file into pattern space.
   #
-  call git filter-branch --tree-filter "\"$SHELL_FIND\" \"$dir\" -name \"$file_name_pttn\" -type f -exec sed$sed_bare_flags -e \
-    \"H;1h;\\\$!d;x; s|$sed_text_to_match|$sed_text_to_replace|g\" {} \;" "${@:5}"
+  call git filter-branch --tree-filter "if [[ -e \"$dir\" ]]; then \"$SHELL_FIND\" \"$dir\" -name \"$file_name_pttn\" -type f -exec sed$sed_bare_flags -e \
+    \"H;1h;\\\$!d;x; s|$sed_text_to_match|$sed_text_to_replace|g\" \"{}\" \;; fi" "${@:5}"
 }
 
 # shortcut
