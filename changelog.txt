@@ -1,3 +1,6 @@
+2024.02.20:
+* new: git_filter_branch_update_file_text.sh: `--sed-expr-prefix`, `--sed-expr-begin`, `--sed-expr-end` to override all parts of the sed generic expression
+
 2024.02.02:
 * fixed: git_filter_branch_update_file_text.sh: `find: ‘...’: No such file or directory` error
 

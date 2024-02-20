@@ -20,6 +20,25 @@
 #         ` -> \`
 #         $ -> \$
 #
+#     --sed-expr-prefix <sed-expr-prefix>
+#       Prefix of the while sed expression in the format:
+#         <PREFIX>; <BEGIN>|<text-to-match>|<text-to-replace>|<END>
+#       By default the whole file does load into pattern space using this
+#       prefix:
+#         `H;1h;\$!d;x`
+#
+#     --sed-expr-begin <sed-expr-begin>
+#       Begin of the sed expression in the format:
+#         <PREFIX>; <BEGIN>|<text-to-match>|<text-to-replace>|<END>
+#       By default the substitution is used:
+#         `s`
+#
+#     --sed-expr-end <sed-expr-end>
+#       Begin of the sed expression in the format:
+#         <PREFIX>; <BEGIN>|<text-to-match>|<text-to-replace>|<END>
+#       By default the global match is used:
+#         `g`
+#
 #   //:
 #     Separator to stop parse flags.
 #
@@ -31,7 +50,7 @@
 #     Source tree relative file pattern to a file to update.
 #     Passes to `find` utility.
 #
-#   <path-to-match>:
+#   <text-to-match>:
 #     The `sed` text to match.
 #
 #   <text-to-replace>:
@@ -72,6 +91,13 @@
 #   >
 #   cd myrepo/path
 #   git_filter_branch_update_file_text.sh -E . changelog.txt '(\d\d\d\d[.-]\d\d[.-]\d\d:)(\r\n|\n|\r)[\r\n]*' '\1\2' -- master ^t1 ^t2
+#
+#   # Remove file UTF-8 BOM characters.
+#   # Based on:
+#   #   https://unix.stackexchange.com/questions/381230/how-can-i-remove-the-bom-from-a-utf-8-file/381263#381263
+#   >
+#   cd myrepo/path
+#   git_filter_branch_update_file_text.sh -E --sed-expr-prefix '' --sed-expr-begin 1s --sed-expr-end '' . changelog.txt '^\xEF\xBB\xBF' '' -- master
 
 # CAUTION:
 #   Beware of line returns in Windows. Even if `sed` does not match the string,
@@ -164,6 +190,17 @@ function git_filter_branch_update_file_text()
   local flag="$1"
 
   local option_esc_sh_chars=0
+
+  # Based on: https://unix.stackexchange.com/questions/182153/sed-read-whole-file-into-pattern-space-without-failing-on-single-line-input/182154#182154
+  #
+  # NOTE:
+  #   Reads portably whole file into pattern space.
+  #
+  local sed_expr_prefix='H;1h;\$!d;x' # for `find` escaped
+
+  local sed_expr_begin='s'
+  local sed_expr_end='g'
+
   local flag_E=0
   local flag_r=0
   local skip_flag
@@ -176,6 +213,18 @@ function git_filter_branch_update_file_text()
 
     if [[ "$flag" == '-esc-sh-chars' ]]; then
       option_esc_sh_chars=1
+      skip_flag=1
+    elif [[ "$flag" == '-sed-expr-prefix' ]]; then
+      sed_expr_prefix="$2"
+      shift
+      skip_flag=1
+    elif [[ "$flag" == '-sed-expr-begin' ]]; then
+      sed_expr_begin="$2"
+      shift
+      skip_flag=1
+    elif [[ "$flag" == '-sed-expr-end' ]]; then
+      sed_expr_end="$2"
+      shift
       skip_flag=1
     elif [[ "${flag:0:1}" == '-' ]]; then
       echo "$0: error: invalid flag: \`$flag\`" >&2
@@ -211,23 +260,24 @@ function git_filter_branch_update_file_text()
   local sed_text_to_match="$3"
   local sed_text_to_replace="$4"
 
+  sed_expr_begin="${sed_expr_begin//\|/\\\|}"
+  sed_expr_end="${sed_expr_end//\|/\\\|}"
   sed_text_to_match="${sed_text_to_match//\|/\\\|}"
   sed_text_to_replace="${sed_text_to_replace//\|/\\\|}"
 
   if (( option_esc_sh_chars )); then
+    sed_expr_begin="${sed_expr_begin//\`/\\\`}"
+    sed_expr_begin="${sed_expr_begin//\$/\\\$}"
+    sed_expr_end="${sed_expr_end//\`/\\\`}"
+    sed_expr_end="${sed_expr_end//\$/\\\$}"
     sed_text_to_match="${sed_text_to_match//\`/\\\`}"
     sed_text_to_match="${sed_text_to_match//\$/\\\$}"
     sed_text_to_replace="${sed_text_to_replace//\`/\\\`}"
     sed_text_to_replace="${sed_text_to_replace//\$/\\\$}"
   fi
 
-  # Based on: https://unix.stackexchange.com/questions/182153/sed-read-whole-file-into-pattern-space-without-failing-on-single-line-input/182154#182154
-  #
-  # NOTE:
-  #   `H;1h;\\\$!d;x;` reads portably whole file into pattern space.
-  #
   call git filter-branch --tree-filter "if [[ -e \"$dir\" ]]; then \"$SHELL_FIND\" \"$dir\" -name \"$file_name_pttn\" -type f -exec sed$sed_bare_flags -e \
-    \"H;1h;\\\$!d;x; s|$sed_text_to_match|$sed_text_to_replace|g\" \"{}\" \;; fi" "${@:5}"
+    \"$sed_expr_prefix${sed_expr_prefix:+;}${sed_expr_prefix:+ }$sed_expr_begin|$sed_text_to_match|$sed_text_to_replace|$sed_expr_end\" \"{}\" \;; fi" "${@:5}"
 }
 
 # shortcut
