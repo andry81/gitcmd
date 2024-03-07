@@ -1,4 +1,7 @@
 2024.03.07:
+* changed: README_EN.txt: readme update
+
+2024.03.07:
 * changed: git_init.sh: added `gitverse.ru` usage example
 
 2024.02.20:
