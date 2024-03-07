@@ -29,6 +29,7 @@
 #   GIT_REPO_DEFAULT_REMOTES=(
 #     gh https://github.com/{{REPO_OWNER}}/{{REPO}}
 #     gl https://gitlab.com/{{REPO_OWNER}}/{{REPO}}.git
+#     gv https://gitverse.ru/sc/{{REPO_OWNER}}/{{REPO}}.git
 #     sf ssh://{{SSH_GIT_AUTH_USER}}@git.code.sf.net/p/{{REPO_OWNER}}/{{REPO}}
 #   )
 #

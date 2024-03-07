@@ -1,3 +1,6 @@
+2024.03.07:
+* changed: git_init.sh: added `gitverse.ru` usage example
+
 2024.02.20:
 * new: git_filter_branch_update_file_text.sh: `--sed-expr-prefix`, `--sed-expr-begin`, `--sed-expr-end` to override all parts of the sed generic expression
 
