@@ -1,4 +1,7 @@
 2024.05.16:
+* changed: README_EN.txt: readme update
+
+2024.05.16:
 * new: README.md: markdown readme file
 * changed: license.txt: copyright year as project born year
 

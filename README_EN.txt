@@ -1,11 +1,12 @@
 * README_EN.txt
-* 2024.03.07
+* 2024.05.16
 * gitcmd
 
 1. DESCRIPTION
 2. LICENSE
 3. REPOSITORIES
-4. AUTHOR
+4. PROJECT CONFIGURATION VARIABLES
+5. AUTHOR
 
 -------------------------------------------------------------------------------
 1. DESCRIPTION
@@ -31,7 +32,21 @@ Second mirror:
   * https://gitlab.com/andry81/gitcmd/-/branches
     https://gitlab.com/andry81/gitcmd.git
 
+gituserbin:
+
+Primary:
+  * https://github.com/andry81/gituserbin
+First mirror:
+  * https://sf.net/p/gitcmd/gituserbin
+Second mirror:
+  * https://gitlab.com/andry81/gituserbin
+
 -------------------------------------------------------------------------------
-4. AUTHOR
+4. PROJECT CONFIGURATION VARIABLES
+-------------------------------------------------------------------------------
+See `README_EN.txt` from `gituserbin` project.
+
+-------------------------------------------------------------------------------
+5. AUTHOR
 -------------------------------------------------------------------------------
 Andrey Dibrov (andry at inbox dot ru)
