@@ -1,3 +1,7 @@
+2024.05.16:
+* new: README.md: markdown readme file
+* changed: license.txt: copyright year as project born year
+
 2024.03.07:
 * changed: README_EN.txt: readme update
 
@@ -64,6 +68,8 @@
 * new: extracted scripts and changelog file from `tacklelib` project
 * new: README_EN.txt: readme file
 * new: license.txt: license file
+
+===============================================================================
 
 2023.12.20:
 * new: git_subgit_svn_import_cleanup.sh: script to complete the last operation and cleanup artefacts after using `subgit import ...` command (https://subgit.com/documentation/howto.html#import)
