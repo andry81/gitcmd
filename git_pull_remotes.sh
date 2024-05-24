@@ -28,7 +28,7 @@
 #   use SSH key through the Putty.
 
 # Script both for execution and inclusion.
-if [[ -n "$BASH" ]]; then
+[[ -n "$BASH" ]] || return 0 || exit 0 # exit to avoid continue if the return can not be called
 
 function evalcall()
 {
@@ -203,6 +203,4 @@ function git_pu_rs()
 if [[ -z "$BASH_LINENO" || BASH_LINENO[0] -eq 0 ]]; then
   # Script was not included, then execute it.
   git_pull_remotes "$@"
-fi
-
 fi

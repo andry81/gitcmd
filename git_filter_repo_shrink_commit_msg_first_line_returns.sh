@@ -48,7 +48,7 @@
 #   operation and cleanup the repository from intermediate references.
 
 # Script both for execution and inclusion.
-if [[ -n "$BASH" ]]; then
+[[ -n "$BASH" ]] || return 0 || exit 0 # exit to avoid continue if the return can not be called
 
 function call()
 {
@@ -116,6 +116,4 @@ function git_flr_shr_cm_flnr()
 if [[ -z "$BASH_LINENO" || BASH_LINENO[0] -eq 0 ]]; then
   # Script was not included, then execute it.
   git_filter_repo_shrink_commit_msg_first_line_returns "$@"
-fi
-
 fi
