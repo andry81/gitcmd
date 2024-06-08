@@ -1,4 +1,10 @@
 2024.06.08:
+* new: vcstool/git_gen_gitmodules.sh: `--gen-submodule-name-from-url` flag to generate submodule name from `url` field instead of `repositories` key values
+* new: vcstool/git_gen_gitmodules.sh: `-a` flag to append to output file name from `<output-file-name-prefix>` as complete name (not prefix)
+* new: vcstool/git_gen_gitmodules.sh: `-t` flag to append next found files except the first found file (tail files)
+* refactor: minor refactor
+
+2024.06.08:
 * fixed: git_bare_config_*_rewrite.sh, git_filter_branch_update_file_text.sh: cygwin workaround
 * new: vcstool/git_gen_gitmodules.sh: script to generate `.gitmodules` file from `vcstool` repositories file
 * refactor: `subgit` and `transcrypt` scripts moved into subdirectories

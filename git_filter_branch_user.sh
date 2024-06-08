@@ -10,7 +10,7 @@
 
 # Format:
 #   git_filter_branch_user.sh author:committer email@to newname email@from oldname [email2@from oldname2 ...]
-#   git-fb-u a:c email@to newname email@from oldname [email2@from oldname2 ...]
+#   git_flb_u a:c email@to newname email@from oldname [email2@from oldname2 ...]
 #
 
 # Usage:
@@ -18,14 +18,14 @@
 #
 #   >
 #   git filter-branch --env-filter \
-#     "source '...path-to-file.../git_filter_branch_user.sh'; \
-#     git_fb_u a:c '<USER_NEW_EMAIL>' '<USER_NEW_NAME>' '<USER_OLD_EMAIL>' '<USER_OLD_NAME>'" -- --all
+#     "source \"$PROJECTS_ROOT\"'/andry81/gitcmd/gitcmd/git_filter_branch_user.sh; \
+#     git_flb_u a:c '<USER_NEW_EMAIL>' '<USER_NEW_NAME>' '<USER_OLD_EMAIL>' '<USER_OLD_NAME>'" -- --all
 #
 #   For multiple user emails and names:
 #
 #   >
 #   git filter-branch --env-filter \
-#     "source '...path-to-file.../git_filter_branch_user.sh'; \
+#     "source \"$PROJECTS_ROOT\"'/andry81/gitcmd/gitcmd/git_filter_branch_user.sh; \
 #     git_fb_u a:c '<USER_NEW_EMAIL>' '<USER_NEW_NAME>' '<USER_OLD_EMAIL_1>' '<USER_OLD_NAME_1>' '<USER_OLD_EMAIL_2>' '<USER_OLD_NAME_2>'" -- --all
 #
 

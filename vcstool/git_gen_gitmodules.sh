@@ -24,8 +24,19 @@
 #       If not defined, then `".git" ".log" "_externals" "_out"` is used by
 #       default.
 #
+#     --gen-submodule-name-from-url
+#       Generate submodule name from `url` field instead of `repositories` key
+#       values.
+#
 #     -f:
 #       Force overwrite output file.
+#
+#     -a:
+#       Append to output file name from `<output-file-name-prefix>` as complete
+#       name (not prefix).
+#
+#     -t:
+#       Append next found files except the first found file (tail files).
 #
 #   //:
 #     Separator to stop parse flags.
@@ -44,11 +55,11 @@
 #     If not defined, then `.gitmodules` is used.
 #
 #   If output file name is equal to `<default-input-file-name-prefix>`, then
-#   the `<output-file-name-prefix>` is used as the output file name.
+#   the `<output-file-name-prefix>` is used as the output complete file name.
 #
 #   If output file name begins by the `<default-input-file-name-prefix>`,
 #   then the `<output-file-name-prefix>-<input-file-name-suffix>` is used,
-#   where the `<input-file-name-suffix>` is the input files name without
+#   where the `<input-file-name-suffix>` is the input file name without
 #   `<default-input-file-name-prefix>` prefix.
 #
 #   In all other cases the output file name is
@@ -79,6 +90,18 @@
 #   git_gen_gitmodules.sh . .externals-win7
 #   >
 #   find . -name .gitmodules-win7 -type f
+#
+#   >
+#   cd myrepo/path
+#   git_gen_gitmodules.sh -fa . '.externals-*'
+#   >
+#   find . -name .gitmodules -type f
+#
+#   >
+#   cd myrepo/path
+#   git_gen_gitmodules.sh -fat
+#   >
+#   find . -name .gitmodules -type f
 #
 
 # Script both for execution and inclusion.
@@ -197,9 +220,12 @@ function git_gen_gitmodules()
   local flag="$1"
 
   local flag_force=0
+  local flag_append=0
+  local flag_tail=0
   local flag_ignore_type=0
   local default_input_file_name_prefix
   local exclude_dirs
+  local flag_gen_submodule_name_from_url=0
   local skip_flag
 
   while [[ "${flag:0:1}" == '-' ]]; do
@@ -218,6 +244,9 @@ function git_gen_gitmodules()
       exclude_dirs="$2"
       skip_flag=1
       shift
+    elif [[ "$flag" == '-gen-submodule-name-from-url' ]]; then
+      flag_gen_submodule_name_from_url=1
+      skip_flag=1
     elif [[ "${flag:0:1}" == '-' ]]; then
       echo "$0: error: invalid flag: \`$flag\`" >&2
       return 255
@@ -229,6 +258,12 @@ function git_gen_gitmodules()
         if [[ "${flag//f/}" != "$flag" ]]; then
           flag_force=1
           flag="${flag//f/}"
+        elif [[ "${flag//a/}" != "$flag" ]]; then
+          flag_append=1
+          flag="${flag//a/}"
+        elif [[ "${flag//t/}" != "$flag" ]]; then
+          flag_tail=1
+          flag="${flag//t/}"
         else
           echo "$0: error: invalid flag: \`${flag:0:1}\`" >&2
           return 255
@@ -287,42 +322,60 @@ function git_gen_gitmodules()
     find_bare_flags="$find_bare_flags -not \\( -path \"${exclude_dits_arr[i]}\" -prune \\)"
   done
 
+  local file_index=-1
+
   IFS=$'\r\n'; for input_file in `eval \"\$SHELL_FIND\" \"\$dir\"$find_bare_flags -iname \"\$input_file_name_pattern\" -type f`; do # IFS - with trim trailing line feeds
+    (( file_index++ ))
+
     input_file_name="${input_file##*/}"
     output_file_dir="${input_file%/*}"
 
-    if [[ "$input_file_name" == "$default_input_file_name_prefix" ]]; then
-      output_file_name="$output_file_name_prefix"
-    else
-      input_file_name_suffix="${input_file_name#"$default_input_file_name_prefix"}"
-
-      if [[ "$input_file_name_suffix" != "$input_file_name" ]]; then
-        input_file_name_suffix="${input_file_name_suffix#"-"}"
-        input_file_name_suffix="${input_file_name_suffix#"."}"
-        output_file_name="$output_file_name_prefix-${input_file_name_suffix#"-"}"
+    if (( ! flag_append )); then
+      if [[ "$input_file_name" == "$default_input_file_name_prefix" ]]; then
+        output_file_name="$output_file_name_prefix"
       else
-        input_file_name="${input_file_name#"-"}"
-        input_file_name="${input_file_name#"."}"
-        output_file_name="$output_file_name_prefix-$input_file_name"
+        input_file_name_suffix="${input_file_name#"$default_input_file_name_prefix"}"
+
+        if [[ "$input_file_name_suffix" != "$input_file_name" ]]; then
+          input_file_name_suffix="${input_file_name_suffix#"-"}"
+          input_file_name_suffix="${input_file_name_suffix#"."}"
+          output_file_name="$output_file_name_prefix-${input_file_name_suffix#"-"}"
+        else
+          input_file_name="${input_file_name#"-"}"
+          input_file_name="${input_file_name#"."}"
+          output_file_name="$output_file_name_prefix-$input_file_name"
+        fi
       fi
+    else
+      output_file_name="$output_file_name_prefix"
     fi
 
     output_file_path="$output_file_dir/$output_file_name"
 
     if (( ! flag_force )) && [[ -f "$output_file_path" ]]; then
-      echo "$0: error: output file name already exists: \`${output_file_path#"./"}\`" >&2
+      echo "$0: error: output file already exists: \`${output_file_path#"./"}\`" >&2
       return 1
     fi
 
-    echo "$output_file_dir: $input_file_name -> $output_file_name"
-
-    # read line return character in case on Windows text format
+    # read first line return character in case of Windows text format
     IFS='' read -r LR < "$input_file"
     LR="${LR//[^$'\r\n']/}"
 
     module_index=-1
 
-    for external_path in $("${YQ_CMDLINE_READ[@]}" '.repositories|to_entries[]|.key' "$input_file"); do
+    # save stdout
+    exec 5>&1
+
+    if (( ! flag_append || flag_tail && ! file_index )); then
+      echo "$output_file_dir: $input_file_name -> $output_file_name"
+      exec 1> "$output_file_path"
+    else
+      echo "$output_file_dir: $input_file_name ->> $output_file_name"
+      exec 1>> "$output_file_path"
+      echo "$LR"
+    fi
+
+    IFS=$'\r\n'; for external_path in $("${YQ_CMDLINE_READ[@]}" '.repositories|to_entries[]|.key' "$input_file"); do # IFS - with trim trailing line feeds
       (( module_index++ ))
 
       # CAUTION:
@@ -336,7 +389,8 @@ function git_gen_gitmodules()
       # CAUTION:
       #   Prevent of invalid values spread.
       #
-      yq_fix_null type url version
+      yq_fix_null url && break
+      yq_fix_null type version
 
       IFS=$'\r\n' read -r -d '' subpaths_num <<< \
         $("${YQ_CMDLINE_READ[@]}" "(.repositories[\"$external_path\"].subpaths|length)" "$input_file")
@@ -346,8 +400,23 @@ function git_gen_gitmodules()
       #
       yq_fix_null subpaths_num:0
 
-      submodule_name="${external_path#*/}"
-      submodule_name="${submodule_name//\//--}"
+      if (( ! flag_gen_submodule_name_from_url )); then
+        submodule_name="$external_path"
+        # remove trailing slashes
+        while [[ "${submodule_name: -1}" == '/' ]]; do
+          submodule_name="${submodule_name:0:-1}"
+        done
+        submodule_name="${submodule_name#*/}"
+        submodule_name="${submodule_name//\//--}"
+      else
+        submodule_name="$url"
+        # remove trailing slashes
+        while [[ "${submodule_name: -1}" == '/' ]]; do
+          submodule_name="${submodule_name:0:-1}"
+        done
+        submodule_name="${submodule_name##*/}"
+        submodule_name="${submodule_name#*--}"
+      fi
 
       if [[ "$type" != "git" ]] && (( ! flag_ignore_type )); then
         continue
@@ -363,7 +432,10 @@ function git_gen_gitmodules()
       if (( subpaths_num )); then
         echo "  shallow = true$LR"
       fi
-    done > "$output_file_path"
+    done
+
+    # restore stdout
+    exec 1>&5
   done
 
   return 0
