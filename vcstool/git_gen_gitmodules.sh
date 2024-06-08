@@ -26,7 +26,7 @@
 #
 #     --gen-submodule-name-from-url
 #       Generate submodule name from `url` field instead of `repositories` key
-#       values.
+#       values, but use the key value for the `url` field reduction.
 #
 #     -f:
 #       Force overwrite output file.
@@ -400,22 +400,28 @@ function git_gen_gitmodules()
       #
       yq_fix_null subpaths_num:0
 
+      # remove trailing slashes
+      while [[ "${external_path: -1}" == '/' ]]; do
+        external_path="${external_path:0:-1}"
+      done
+
       if (( ! flag_gen_submodule_name_from_url )); then
-        submodule_name="$external_path"
-        # remove trailing slashes
-        while [[ "${submodule_name: -1}" == '/' ]]; do
-          submodule_name="${submodule_name:0:-1}"
-        done
-        submodule_name="${submodule_name#*/}"
+        submodule_name="${external_path#*/}"
         submodule_name="${submodule_name//\//--}"
       else
         submodule_name="$url"
+
         # remove trailing slashes
         while [[ "${submodule_name: -1}" == '/' ]]; do
           submodule_name="${submodule_name:0:-1}"
         done
+
         submodule_name="${submodule_name##*/}"
-        submodule_name="${submodule_name#*--}"
+
+        if [[ "${external_path#*/}" != "$submodule_name" ]]; then
+          # reduce prefix if not equal
+          submodule_name="${submodule_name#*--}"
+        fi
       fi
 
       if [[ "$type" != "git" ]] && (( ! flag_ignore_type )); then

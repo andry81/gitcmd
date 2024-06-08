@@ -1,4 +1,7 @@
 2024.06.08:
+* changed: vcstool/git_gen_gitmodules.sh: `--gen-submodule-name-from-url` implementation improvement
+
+2024.06.08:
 * new: vcstool/git_gen_gitmodules.sh: `--gen-submodule-name-from-url` flag to generate submodule name from `url` field instead of `repositories` key values
 * new: vcstool/git_gen_gitmodules.sh: `-a` flag to append to output file name from `<output-file-name-prefix>` as complete name (not prefix)
 * new: vcstool/git_gen_gitmodules.sh: `-t` flag to append next found files except the first found file (tail files)
