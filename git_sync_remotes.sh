@@ -5,14 +5,14 @@
 #   Before the push all branches does the current branch pull with the fast-forward merge only.
 
 # Usage:
-#   git_sync_remotes.sh <flags> [//] <from-remote> [to-remote1 [to-remote2 [...to-remoteN]]] [: branch1 [branch2 [...branchN]]] [// <push-cmd-line>]
-#
-#   //:
-#     Separator to stop parse flags or previous command line argument list.
+#   git_sync_remotes.sh [<flags>] [//] <from-remote> [to-remote1 [to-remote2 [...to-remoteN]]] [: branch1 [branch2 [...branchN]]] [// <push-cmd-line>]
 #
 #   <flags>:
 #     --current-branch:
 #       Sync a current branch only.
+#
+#   //:
+#     Separator to stop parse flags or previous command line argument list.
 #
 #   <from-remote>:
 #     Remote to pull from.

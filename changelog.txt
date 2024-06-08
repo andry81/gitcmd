@@ -1,3 +1,8 @@
+2024.06.08:
+* fixed: git_bare_config_*_rewrite.sh, git_filter_branch_update_file_text.sh: cygwin workaround
+* new: vcstool/git_gen_gitmodules.sh: script to generate `.gitmodules` file from `vcstool` repositories file
+* refactor: `subgit` and `transcrypt` scripts moved into subdirectories
+
 2024.05.24:
 * changed: minor improvement
 

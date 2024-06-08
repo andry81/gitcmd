@@ -255,6 +255,9 @@ function git_filter_branch_update_file_text()
 
   detect_find
 
+  # cygwin workaround
+  SHELL_FIND="${SHELL_FIND//\\//}"
+
   local dir="$1"
   local file_name_pttn="$2"
   local sed_text_to_match="$3"

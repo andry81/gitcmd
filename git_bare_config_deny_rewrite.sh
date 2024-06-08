@@ -74,7 +74,10 @@ function git_bare_config_deny_rewrite()
   if [[ -n "$name_pttn" ]]; then
     detect_find
 
-    IFS=$'\r\n'; for git_path in `\"$SHELL_FIND\" "$dir" -name "$name_pttn" -type d`; do # IFS - with trim trailing line feeds
+    # cygwin workaround
+    SHELL_FIND="${SHELL_FIND//\\//}"
+
+    IFS=$'\r\n'; for git_path in `"$SHELL_FIND" "$dir" -name "$name_pttn" -type d`; do # IFS - with trim trailing line feeds
       call pushd "$git_path" && {
         call git config receive.denynonfastforwards true
         call popd
