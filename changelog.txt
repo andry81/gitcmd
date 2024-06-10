@@ -1,3 +1,6 @@
+2024.06.09:
+* new: vcstool/git_gen_gitmodules.sh: `--allow-fetch-recursion-on-sparsed-submodules` flag to avoid `fetchRecurseSubmodules = false` option in the output file for a sparsed checkout submodule
+
 2024.06.08:
 * changed: vcstool/git_gen_gitmodules.sh: `--gen-submodule-name-from-url` implementation improvement
 

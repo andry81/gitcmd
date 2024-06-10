@@ -28,6 +28,11 @@
 #       Generate submodule name from `url` field instead of `repositories` key
 #       values, but use the key value for the `url` field reduction.
 #
+#     --allow-fetch-recursion-on-sparsed-submodules
+#       By default a sparse checkouted submodule has the
+#       `fetchRecurseSubmodules = false` option in the output file.
+#       This option avoids it.
+#
 #     -f:
 #       Force overwrite output file.
 #
@@ -226,6 +231,7 @@ function git_gen_gitmodules()
   local default_input_file_name_prefix
   local exclude_dirs
   local flag_gen_submodule_name_from_url=0
+  local flag_allow_fetch_recursion_on_sparsed_submodules=0
   local skip_flag
 
   while [[ "${flag:0:1}" == '-' ]]; do
@@ -246,6 +252,9 @@ function git_gen_gitmodules()
       shift
     elif [[ "$flag" == '-gen-submodule-name-from-url' ]]; then
       flag_gen_submodule_name_from_url=1
+      skip_flag=1
+    elif [[ "$flag" == '-allow-fetch-recursion-on-sparsed-submodules' ]]; then
+      flag_allow_fetch_recursion_on_sparsed_submodules=1
       skip_flag=1
     elif [[ "${flag:0:1}" == '-' ]]; then
       echo "$0: error: invalid flag: \`$flag\`" >&2
@@ -437,6 +446,9 @@ function git_gen_gitmodules()
       echo "  branch = $version$LR"
       if (( subpaths_num )); then
         echo "  shallow = true$LR"
+        if (( ! flag_allow_fetch_recursion_on_sparsed_submodules )); then
+          echo "  fetchRecurseSubmodules = false$LR"
+        fi
       fi
     done
 
