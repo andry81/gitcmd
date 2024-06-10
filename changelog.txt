@@ -1,3 +1,8 @@
+2024.06.10:
+* new: vcstool/git_gen_gitmodules.sh: `--allow-update-on-sparsed-submodules` flag to avoid `update = none` option in the output file for a sparsed checkout submodule (avoids recursion in `git submodule update --init --recursive` command)
+* new: vcstool/git_gen_gitmodules.sh: `-u` flag as short version of `--gen-submodule-name-from-url` flag
+* changed: vcstool/git_gen_gitmodules.sh: removed `shallow = true` option generation
+
 2024.06.09:
 * new: vcstool/git_gen_gitmodules.sh: `--allow-fetch-recursion-on-sparsed-submodules` flag to avoid `fetchRecurseSubmodules = false` option in the output file for a sparsed checkout submodule
 
