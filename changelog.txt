@@ -1,3 +1,6 @@
+2024.06.12:
+* changed: git_pull_remotes.sh: move `from-remote` parameter to the beginning if equal to `default-remote`
+
 2024.06.10:
 * new: vcstool/git_gen_gitmodules.sh: `--allow-update-on-sparsed-submodules` flag to avoid `update = none` option in the output file for a sparsed checkout submodule (avoids recursion in `git submodule update --init --recursive` command)
 * new: vcstool/git_gen_gitmodules.sh: `-u` flag as short version of `--gen-submodule-name-from-url` flag

@@ -67,6 +67,8 @@ function git_pull_remotes()
   # read output remotes
   local num_args=${#@}
 
+  local has_default_remote=0
+
   for (( i=0; i < num_args; i++ )); do
     local arg="$1"
 
@@ -77,12 +79,23 @@ function git_pull_remotes()
       break
     fi
 
+    # if has, then move to the beginning
+    if [[ "$arg" == "$default_remote" ]]; then
+      has_default_remote=1
+      shift
+      continue
+    fi
+
     from_remotes[i]="$arg"
 
     shift
   done
 
-  if (( ! ${#from_remotes[@]} )); then
+  if (( ${#from_remotes[@]} )); then
+    if (( has_default_remote )); then
+      from_remotes=("$default_remote" "${from_remotes[@]}")
+    fi
+  else
     local has_default_remote=0
     local local_remote
 
@@ -158,7 +171,7 @@ function git_pull_remotes()
   #   We should not call the pull here directly, because it involves an evential merge with the current branch.
   #   On another hand we can not checkout each branch because might want to keep a working state with the current branch.
   #   To pull all branches and merge one remote with one local, we must use fetch command with the fast-forward merge or rebase.
-  #   This will avoid accidental merge with the current branch and will kept the current branch as checked out.
+  #   This will avoid accidental merge with the current branch and will keep the current branch as checked out.
 
   # read <fetch-cmd-line>
   local next_cmdline=0

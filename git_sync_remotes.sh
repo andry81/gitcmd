@@ -203,7 +203,7 @@ function git_sync_remotes()
   #   We should not call the pull here directly, because it involves an evential merge with the current branch.
   #   On another hand we can not checkout each branch because might want to keep a working state with the current branch.
   #   To pull all branches and merge one remote with one local, we must use fetch command with the fast-forward merge or rebase.
-  #   This will avoid accidental merge with the current branch and will kept the current branch as checked out.
+  #   This will avoid accidental merge with the current branch and will keep the current branch as checked out.
 
   # read <push-cmd-line>
   local next_cmdline=0

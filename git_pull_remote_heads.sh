@@ -4,7 +4,7 @@
 #   Script to pull all branches from a remote with the fast-foward merge only.
 
 # Usage:
-#   git_pull_remotes.sh <remote> [// <fetch-cmd-line>]
+#   git_pull_remotes_heads.sh <remote> [// <fetch-cmd-line>]
 #
 #   //:
 #     Separator to stop parse flags or previous command line argument list.
