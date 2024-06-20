@@ -1,3 +1,6 @@
+2024.06.20:
+* new: TODO.txt: todo file
+
 2024.06.12:
 * changed: git_pull_remotes.sh: move `from-remote` parameter to the beginning if equal to `default-remote`
 
