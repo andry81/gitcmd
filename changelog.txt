@@ -1,3 +1,9 @@
+2024.06.28:
+* changed: git_init.sh: added `gitflic.ru` and `gitea.com` usage examples
+
+2024.06.26:
+* refactor: vcstool/git_gen_gitmodules.sh: cleanup
+
 2024.06.20:
 * new: TODO.txt: todo file
 

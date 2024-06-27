@@ -59,16 +59,16 @@
 #     Path pattern for the `find` tool to find `vcstool` repository file(s).
 #     If not defined, then `<default-input-file-name-prefix>*` is used as by
 #     default from the `<dir>` or current directory.
-#     `<default-input-file-name-prefix>` as a cut off prefix.
+#     `<default-input-file-name-prefix>` is used as a trim.
 #
 #   <output-file-name-prefix>:
 #     Output file name prefix.
 #     If not defined, then `.gitmodules` is used.
 #
-#   If output file name is equal to `<default-input-file-name-prefix>`, then
+#   If input file name is equal to `<default-input-file-name-prefix>`, then
 #   the `<output-file-name-prefix>` is used as the output complete file name.
 #
-#   If output file name begins by the `<default-input-file-name-prefix>`,
+#   If input file name begins by the `<default-input-file-name-prefix>`,
 #   then the `<output-file-name-prefix>-<input-file-name-suffix>` is used,
 #   where the `<input-file-name-suffix>` is the input file name without
 #   `<default-input-file-name-prefix>` prefix.
