@@ -42,7 +42,7 @@ function detect_find()
     if [[ "$old_shopt" != 'shopt -s nocasematch' ]]; then
       shopt -s nocasematch
     else
-      unset old_shopt
+      old_shopt=''
     fi
 
     IFS=$'\r\n'; for path in `where find 2>/dev/null`; do # IFS - with trim trailing line feeds
