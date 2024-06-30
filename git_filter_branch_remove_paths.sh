@@ -1,11 +1,11 @@
 #!/bin/bash
 
 # Description:
-#   Script to remove path list from all commits in a repository using
+#   Script to remove paths from all commits in a repository using
 #   `git filter-branch` command.
 
 # Usage:
-#   git_filter_branch_remove_path_list.sh [<flags>] [//] <path0> [... <pathN>] [// <cmd-line>]
+#   git_filter_branch_remove_paths.sh [<flags>] [//] <path0> [... <pathN>] [// <cmd-line>]
 
 #   <flags>:
 #     --i0
@@ -24,17 +24,20 @@
 #
 #   //:
 #     Separator to stop parse flags.
+#
 #   <path0> [... <pathN>]:
 #     Source tree relative file paths to a file/directory to remove.
+#
 #   //:
 #     Separator to stop parse path list.
+#
 #   <cmd-line>:
 #     The rest of command line passed to `git filter-branch` command.
 
 # Examples:
 #   >
 #   cd myrepo/path
-#   git_filter_branch_remove_path_list.sh dir1/ file1 file2/ dir-or-file // -- dev ^t1 ^master
+#   git_filter_branch_remove_paths.sh dir1/ file1 file2/ dir-or-file // -- dev ^t1 ^master
 #
 #   NOTE:
 #     * `dir1`            - (dir) removed
@@ -51,22 +54,22 @@
 #   # ancestor branches.
 #   >
 #   cd myrepo/path
-#   git_filter_branch_remove_path_list.sh ... -- --all
+#   git_filter_branch_remove_paths.sh ... -- --all
 #
 #   # To update all commits by tag `t1` to update first commit(s) in all
 #   # ancestor branches.
 #   >
 #   cd myrepo/path
-#   git_filter_branch_remove_path_list.sh ... -- t1
+#   git_filter_branch_remove_paths.sh ... -- t1
 #
 #   # To update single commit by a tag.
 #   >
 #   cd myrepo/path
-#   git_filter_branch_remove_path_list.sh ... -- t1 --not t1^@
+#   git_filter_branch_remove_paths.sh ... -- t1 --not t1^@
 #
 #   >
 #   cd myrepo/path
-#   git_filter_branch_remove_path_list.sh ... -- t1^!
+#   git_filter_branch_remove_paths.sh ... -- t1^!
 
 # CAUTION:
 #   In a generic case the `rev-list` parameter of the `git filter-branch`
@@ -110,7 +113,7 @@ function call()
   "$@"
 }
 
-function git_filter_branch_remove_path_list()
+function git_filter_branch_remove_paths()
 {
   local flag="$1"
 
@@ -245,12 +248,12 @@ git rm'"$rm_bare_flags"' "${path_arr[@]}"' "$@"
 }
 
 # shortcut
-function git_flb_rm_pl()
+function git_flb_rm_ps()
 {
-  git_filter_branch_remove_path_list "$@"
+  git_filter_branch_remove_paths "$@"
 }
 
 if [[ -z "$BASH_LINENO" || BASH_LINENO[0] -eq 0 ]]; then
   # Script was not included, then execute it.
-  git_filter_branch_remove_path_list "$@"
+  git_filter_branch_remove_paths "$@"
 fi

@@ -1,3 +1,6 @@
+2024.07.01:
+* changed: git_filter_branch_remove_path*.sh, git_filter_repo_remove_path*.sh: merged into `git_filter_branch_remove_paths.sh` and `git_filter_repo_remove_paths.sh` scripts respectively, single path script variant is removed
+
 2024.06.28:
 * fixed: `unset` in a function does unset a local variable and exposes an outer variable with the same name
 
