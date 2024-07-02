@@ -23,21 +23,43 @@
 #       and `--i1`.
 #     -S
 #     --remove-submodules
-#       Deinit and remove submodules using `.gitmodules` file using skip
+#       Remove submodule paths using `.gitmodules` file and the skip
 #       filter from `--skip-submodule-*` option.
 #       If all paths is removed, then remove the `.gitmodules` file too.
-#       Has effect if `.gitmodules` is in path list.
+#       Has effect if `.gitmodules` is in path list, but the file does remove
+#       only when all module paths is removed.
+#       CAUTION:
+#         The command line path list does not affect module paths from the
+#         `.gitmodules`.
 #     -P
 #     --skip-submodule-path-prefix
 #       Skip submodule remove for path with prefix (no globbing).
 #       Has no effect if `--remove-submodules` flag is not used.
 #       Has no effect if `.gitmodules` is in path list.
+#     -I
+#     --sync-gitignore-submodule-paths
+#       Synchronize `.gitignore` for paths removed from `.gitmodules`.
+#       Has no effect if `.gitignore` is in path list.
+#       CAUTION:
+#         Is supported a very limited lines format in the `.gitignore` file:
+#           * Blank and comment lines does not restore.
+#           * Leading and trailing white spaces in a line does trim before
+#             check in the index.
+#           * Paths with globbing, backslashes, ranges and exclusion pattern
+#             does pass into `git ls-files` as is to detect indexed paths.
+#         See details: https://git-scm.com/docs/gitignore#_pattern_format
+#       CAUTION:
+#         The command line path list does not affect paths from the
+#         `.gitignore`.
 #
 #   //:
 #     Separator to stop parse flags.
 #
 #   <path0> [... <pathN>]:
 #     Source tree relative file paths to a file/directory to remove.
+#     CAUTION:
+#       If a path is a module directory path, then the module record won't
+#       be removed from the `.gitmodules` file.
 #
 #   //:
 #     Separator to stop parse path list.
@@ -47,9 +69,11 @@
 #
 #   <cmdline>:
 #     The rest of command line passed to `git filter-branch` command.
-#     NOTE:
-#       You must explcitly pass `--prune-empty` flag if don't want the empty
-#       commits to be left.
+
+# CAUTION:
+#   The `--prune-empty` flag will remove ALL the empty commits, including
+#   those which were before the rewrite instead of those which become empty
+#   because of the `git filter-branch ...` apply.
 
 # NOTE:
 #   All `--i*` flags does operate on the Git commit in the index
@@ -143,6 +167,7 @@ function git_filter_branch_remove_paths()
   local flag_r=0
   export flag_remove_submodules=0
   local option_skip_submodule_path_prefix_arr=()
+  export flag_sync_gitignore_submodule_paths=0
   local skip_flag
 
   while [[ "${flag:0:1}" == '-' ]]; do
@@ -165,6 +190,9 @@ function git_filter_branch_remove_paths()
       option_skip_submodule_path_prefix_arr[${#option_skip_submodule_path_prefix_arr[@]}]="$2"
       shift
       skip_flag=1
+    elif [[ "$flag" == '-sync-gitignore-submodule-paths' ]]; then
+      flag_sync_gitignore_submodule_paths=1
+      skip_flag=1
     elif [[ "${flag:0:1}" == '-' ]]; then
       echo "$0: error: invalid flag: \`$flag\`" >&2
       return 255
@@ -182,6 +210,8 @@ function git_filter_branch_remove_paths()
         elif [[ "${flag:0:1}" == 'P' ]]; then
           option_skip_submodule_path_prefix_arr[${#option_skip_submodule_path_prefix_arr[@]}]="$2"
           shift
+        elif [[ "${flag:0:1}" == 'I' ]]; then
+          flag_sync_gitignore_submodule_paths=1
         else
           echo "$0: error: invalid flag: \`${flag:0:1}\`" >&2
           return 255
@@ -255,6 +285,8 @@ function git_filter_branch_remove_paths()
     ;;
   esac
 
+  export has_gitignore_in_path_list=0
+
   local has_cmdline_separator=0
 
   for (( i=0; i < num_args; i++ )); do
@@ -269,6 +301,9 @@ function git_filter_branch_remove_paths()
     if [[ -n "$arg" ]]; then
       if [[ ".gitmodules" != "$arg" ]]; then
         path_list_cmdline="$path_list_cmdline \"$arg\""
+        if [[ ".gitignore" == "$arg" ]]; then
+          has_gitignore_in_path_list=1
+        fi
       else
         if (( ! flag_remove_submodules )); then
           path_list_cmdline="$path_list_cmdline \"$arg\""
@@ -334,18 +369,14 @@ function git_filter_branch_remove_paths()
   {
     # init
     local path_arr
-    local option_skip_submodule_path_prefix_arr
-
     eval path_arr=($path_list_cmdline)
-    eval option_skip_submodule_path_prefix_arr=($option_skip_submodule_paths_cmdline)
-
-    # remove requsted paths at first
-    if (( ${#path_arr[@]} )); then
-      _0FFCA2F7_exec_remove_ls_paths
-      path_arr=()
-    fi
 
     if (( ! flag_remove_submodules )); then
+      if (( ${#path_arr[@]} )); then
+        _0FFCA2F7_exec_remove_ls_paths
+        path_arr=()
+      fi
+
       return 0
     fi
 
@@ -360,6 +391,9 @@ function git_filter_branch_remove_paths()
     fi
 
     git checkout-index -- '.gitmodules' || return $?
+
+    local option_skip_submodule_path_prefix_arr
+    eval option_skip_submodule_path_prefix_arr=($option_skip_submodule_paths_cmdline)
 
     local is_external_path_filtered
     local external_path
@@ -467,9 +501,219 @@ function git_filter_branch_remove_paths()
     # cleanup working tree
     rm '.gitmodules'
 
+    # Update the index before `.gitignore` synchronization, but after `.gitmodules` read, because:
+    #   1. `.gitignore` synchronization does rely on already removed paths from the index.
+    #   2. The command line path list can contain a path to a module directory and we do not check the command line paths on duplication.
+    #      Instead we remove all collected paths altogether to avoid the index update twice, because `git ls-files` accepts duplicated paths.
+    #
     if (( ${#path_arr[@]} )); then
       _0FFCA2F7_exec_remove_ls_paths
       path_arr=()
+    fi
+
+    # synchronize `.gitignore` for paths removed from `.gitmodules`
+    if (( flag_sync_gitignore_submodule_paths && ! has_gitignore_in_path_list )); then
+      IFS=$'\r\n' read path < <(git ls-files ".gitignore")
+
+      if [[ -n "$path" ]] && git checkout-index -- '.gitignore'; then
+        # read commit blob file
+        local tree parent
+
+        while IFS=$'\r\n' read -r line; do # IFS - with trim trailing line feeds
+          printf -v EOL "%02X" "\"${line: -1}"
+          if [[ "$EOL" == '0D' ]]; then
+            line="${line:0:-1}"
+          fi
+          line="${line//[$'\r\n']/}"
+
+          IFS=$' \t' read -r key value <<< "$line"
+
+          case "$key" in
+            'tree')
+               tree="$value"
+               ;;
+            'parent')
+               parent="$value"
+               break
+               ;;
+          esac
+        done < '../../.git-rewrite/commit'
+
+        #echo "commit: $tree $parent"
+
+        # create second temporary directory to generate `.gitignore` from the previous commit
+        local commit_parent_tmp_dir="../../.git-rewrite/commit-parent/$parent/tmp"
+        local commit_parent_tree_dir="../../.git-rewrite/commit-parent/$parent/tree"
+
+        mkdir -p "$commit_parent_tmp_dir"
+
+        if git diff-index --cached -U -p "$parent" -- '.gitignore' > "$commit_parent_tmp_dir/.gitignore.patch"; then
+          if [[ -s "$commit_parent_tmp_dir/.gitignore.patch" ]]; then
+            mkdir "$commit_parent_tree_dir"
+
+            patch -u -R -p1 -s -o "$PWD/$commit_parent_tree_dir/.gitignore" '.gitignore' "$commit_parent_tmp_dir/.gitignore.patch"
+
+            # read first line return character in case of Windows text format
+            IFS='' read -r LR < ".gitignore"
+            printf -v EOL "%02X" "\"${LR: -1}"
+            if [[ "$EOL" == '0D' ]]; then
+              printf -v LR "%s\r" "${LR//[^$'\r\n']/}"
+            else
+              LR="${LR//[^$'\r\n']/}"
+            fi
+
+            # Find paths in the `.gitignore` of the parent commit which is not in the file of the index, then
+            # add them to the `.gitignore` in the working tree if a path is not a part of the updated index.
+            echo -n > "$commit_parent_tmp_dir/.gitignore.new"
+
+            local parent_line raw_parent_line
+            local removed_line_arr=()                   # array of removed lines (existed only in the parent)
+            local to_insert_after_existed_line_arr=()   # upper bound (last) existed (in both files) lines per each removed line (to insert after)
+            local to_insert_after_existed_line
+            local is_line_found
+            local i num_lines
+
+            # collect lines from parent `.gitignore` been removed in the indexed `.gitignore`
+            while IFS=$'\r\n' read -r parent_line; do # IFS - with trim trailing line feeds
+              printf -v EOL "%02X" "\"${parent_line: -1}"
+              if [[ "$EOL" == '0D' ]]; then
+                parent_line="${parent_line:0:-1}"
+              fi
+              parent_line="${parent_line//[$'\r\n']/}"
+
+              # not trimmed line
+              raw_parent_line="$parent_line"
+
+              while [[ "${parent_line: -1}" =~ [[:space:]] ]]; do parent_line="${parent_line:0:-1}"; done # trim trailing white spaces
+              while [[ "${parent_line:0:1}" =~ [[:space:]] ]]; do parent_line="${parent_line:1}"; done # trim leading white spaces
+
+              # skip blank and comment lines in the parent `.gitignore`
+              if [[ -z "$parent_line" || "${parent_line:0:1}" == '#' ]]; then
+                continue
+              fi
+
+              is_line_found=0
+
+              while IFS=$'\r\n' read -r line; do # IFS - with trim trailing line feeds
+                printf -v EOL "%02X" "\"${line: -1}"
+                if [[ "$EOL" == '0D' ]]; then
+                  line="${line:0:-1}"
+                fi
+                line="${line//[$'\r\n']/}"
+
+                while [[ "${line: -1}" =~ [[:space:]] ]]; do line="${line:0:-1}"; done # trim trailing white spaces
+                while [[ "${line:0:1}" =~ [[:space:]] ]]; do line="${line:1}"; done # trim leading white spaces
+
+                if [[ "$line" == "$parent_line" ]]; then
+                  is_line_found=1
+                  break
+                fi
+              done < '.gitignore'
+
+              if (( ! is_line_found )); then
+                removed_line_arr=("${removed_line_arr[@]}" "$raw_parent_line") # not trimmed line
+                to_insert_after_existed_line_arr=("${to_insert_after_existed_line_arr[@]}" "$to_insert_after_existed_line") # trimmed line
+              else
+                to_insert_after_existed_line="$line" # trimmed line
+              fi
+            done < "$commit_parent_tree_dir/.gitignore"
+
+            # insert lines been removed from the parent `.gitignore` but without upper bound lines
+            num_lines=${#removed_line_arr[@]}
+
+            for (( i=0; i < num_lines; i++ )); do
+              if [[ -n "${to_insert_after_existed_line_arr[i]}" ]]; then
+                break
+              fi
+
+              parent_line="${removed_line_arr[i]}"
+              path="$parent_line"
+
+              # convert absolute path to relative
+              if [[ "${path:0:1}" == '/' ]]; then
+                path=".$path"
+              fi
+
+              # insert if not in the index
+              IFS=$'\r\n' read path < <(git ls-files "$path")
+              if [[ -z "$path" ]]; then
+                echo "$parent_line$LR"
+              fi
+            done >> "$commit_parent_tmp_dir/.gitignore.new"
+
+            # update arrays
+            if (( i )); then
+              removed_line_arr=("${removed_line_arr[@]:i}")
+              to_insert_after_existed_line_arr=("${to_insert_after_existed_line_arr[@]:i}")
+            fi
+
+            local prev_line
+
+            num_lines=${#removed_line_arr[@]} # no array resize after this point
+
+            # Generate new `.gitignore` using indexed `.gitignore` and the lines been removed from the parent `.gitignore`.
+            # NOTE:
+            #   We have to use the indexed `.gitignore` as a base, because the lines in the indexed `.gitignore` can be moved or edited
+            #   without addition or removement.
+            #
+            while IFS=$'\r\n' read -r line; do # IFS - with trim trailing line feeds
+              printf -v EOL "%02X" "\"${line: -1}"
+              if [[ "$EOL" == '0D' ]]; then
+                line="${line:0:-1}"
+              fi
+              line="${line//[$'\r\n']/}"
+
+              while [[ "${line: -1}" =~ [[:space:]] ]]; do line="${line:0:-1}"; done # trim trailing white spaces
+              while [[ "${line:0:1}" =~ [[:space:]] ]]; do line="${line:1}"; done # trim leading white spaces
+
+              if [[ -n "$prev_line" && "$prev_line" != "$line" ]]; then
+                # insert lines been removed from the parent `.gitignore` with upper bound line equal to previous trimmed line
+                for (( i=0; i < num_lines; i++ )); do
+                  if [[ "${to_insert_after_existed_line_arr[i]}" != "$prev_line" ]]; then
+                    continue
+                  fi
+
+                  parent_line="${removed_line_arr[i]}"
+                  path="$parent_line"
+
+                  # convert absolute path to relative
+                  if [[ "${path:0:1}" == '/' ]]; then
+                    path=".$path"
+                  fi
+
+                  # insert if not in the index
+                  IFS=$'\r\n' read path < <(git ls-files "$path")
+                  if [[ -z "$path" ]]; then
+                    echo "$parent_line$LR"
+                  fi
+
+                  # update arrays without resize
+                  to_insert_after_existed_line_arr[i]=''
+                done >> "$commit_parent_tmp_dir/.gitignore.new"
+              fi
+
+              # unconditional insert
+              echo "$line$LR" >> "$commit_parent_tmp_dir/.gitignore.new"
+
+              prev_line="$line"
+            done < '.gitignore'
+
+            if cp -T "$commit_parent_tmp_dir/.gitignore.new" '.gitignore'; then
+              git update-index -- '.gitignore'
+            fi
+
+            rm -f "$commit_parent_tmp_dir/.gitignore.new"
+
+            rm -f "$commit_parent_tree_dir/.gitignore"
+            rmdir "$commit_parent_tree_dir"
+          fi
+        fi
+
+        rm -f "$commit_parent_tmp_dir/.gitignore.patch"
+        rmdir "$commit_parent_tmp_dir"
+
+        rm '.gitignore'
+      fi
     fi
   }
 
@@ -480,6 +724,7 @@ function git_filter_branch_remove_paths()
     _0FFCA2F7_eval="$_0FFCA2F7_eval${_0FFCA2F7_eval:+$'\n\n'}function $(declare -f $func)"
   done
 
+  #call git filter-branch --index-filter 'while (( 1 )); do :; done' "$@"
   call git filter-branch --index-filter 'eval "$_0FFCA2F7_eval"; _0FFCA2F7_exec' "$@"
 }
 

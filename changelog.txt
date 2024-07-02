@@ -1,3 +1,6 @@
+2024.07.03:
+* new: git_filter_branch_remove_paths.sh: `--sync-gitignore-submodule-paths`, `-I` flags to synchronize `.gitignore` for paths removed from `.gitmodules`
+
 2024.07.02:
 * fixed: git_filter_branch_remove_paths.sh: missed to use `git rm --cached ...` in case of `--i2` flag
 * fixed: git_filter_*_remove_paths.sh: made last `<cmdline>` separator `//` required to avoid accidental usage of `<cmdline>` as a path list parameter
