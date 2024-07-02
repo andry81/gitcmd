@@ -314,8 +314,8 @@ function git_gen_gitmodules()
   local input_file_name_pattern="${2:-"$default_input_file_name_prefix*"}"
   local output_file_name_prefix="${3:-".gitmodules"}"
 
-  local exclude_dits_arr
-  eval exclude_dits_arr=($exclude_dirs)
+  local exclude_dirs_arr
+  eval exclude_dirs_arr=($exclude_dirs)
 
   yq_init || return $?
 
@@ -334,14 +334,14 @@ function git_gen_gitmodules()
   local find_bare_flags
 
   # prefix all relative paths with './' to apply the exclude dirs
-  for (( i=0; i < ${#exclude_dits_arr[@]}; i++ )); do
-    if [[ "${exclude_dits_arr[i]:0:1}" != "/" && "${exclude_dits_arr[i]:0:2}" != "./" && "${exclude_dits_arr[i]:0:3}" != "../" ]]; then
-      exclude_dits_arr[i]="./${exclude_dits_arr[i]}"
+  for (( i=0; i < ${#exclude_dirs_arr[@]}; i++ )); do
+    if [[ "${exclude_dirs_arr[i]:0:1}" != "/" && "${exclude_dirs_arr[i]:0:2}" != "./" && "${exclude_dirs_arr[i]:0:3}" != "../" ]]; then
+      exclude_dirs_arr[i]="./${exclude_dirs_arr[i]}"
     fi
   done
 
-  for (( i=0; i < ${#exclude_dits_arr[@]}; i++ )); do
-    find_bare_flags="$find_bare_flags -not \\( -path \"${exclude_dits_arr[i]}\" -prune \\)"
+  for (( i=0; i < ${#exclude_dirs_arr[@]}; i++ )); do
+    find_bare_flags="$find_bare_flags -not \\( -path \"${exclude_dirs_arr[i]}\" -prune \\)"
   done
 
   local file_index=-1
@@ -401,9 +401,9 @@ function git_gen_gitmodules()
       (( module_index++ ))
 
       # CAUTION:
-      #   Prevent of invalid values spread if upstream user didn't properly commit completely correct yaml file or didn't commit at all.
+      #   Prevent of invalid values spread.
       #
-      yq_is_null external_path && break
+      yq_is_null external_path && continue
 
       IFS=$'\r\n' read -r -d '' type url version <<< \
         $("${YQ_CMDLINE_READ[@]}" ".repositories[\"$external_path\"].type,.repositories[\"$external_path\"].url,.repositories[\"$external_path\"].version" "$input_file") 2>/dev/null
@@ -411,7 +411,7 @@ function git_gen_gitmodules()
       # CAUTION:
       #   Prevent of invalid values spread.
       #
-      yq_fix_null url && break
+      yq_fix_null url && continue
       yq_fix_null type version
 
       IFS=$'\r\n' read -r -d '' subpaths_num <<< \

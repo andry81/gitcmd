@@ -1,21 +1,24 @@
 #!/bin/bash
 
+# Usage:
+#   git_filter_repo_remove_paths.sh <path0> [... <pathN>] // [<cmdline>]
+
 # Description:
 #   Script to remove paths from all commits in a repository using
 #   `git filter-repo` command:
 #   https://github.com/newren/git-filter-repo
 #   https://github.com/newren/git-filter-repo/tree/HEAD/Documentation/git-filter-repo.txt
 
-# Usage:
-#   git_filter_repo_remove_paths.sh <path0> [... <pathN>] [// <cmd-line>]
-#
 #   <path0> [... <pathN>]:
 #     Source tree relative file paths to a file/directory to remove.
 #
 #   //:
 #     Separator to stop parse path list.
+#     NOTE:
+#       The last separator `//` is required to distinguish path list from
+#       `<cmdline>`.
 #
-#   <cmd-line>:
+#   <cmdline>:
 #     The rest of command line passed to `git filter-repo` command.
 
 # CAUTION:
@@ -83,10 +86,13 @@ function git_filter_repo_remove_paths()
   local num_args=${#args[@]}
   local i
 
+  local has_cmdline_separator=0
+
   for (( i=0; i < num_args; i++ )); do
     arg="${args[i]}"
 
     if [[ "$arg" == '//' ]]; then
+      has_cmdline_separator=1
       shift
       break
     fi
@@ -99,6 +105,11 @@ function git_filter_repo_remove_paths()
 
     arg="$1"
   done
+
+  if (( ! has_cmdline_separator )); then
+    echo "$0: error: missed cmdline separator: \`//\`" >&2
+    return 255
+  fi
 
   if [[ -z "$path_list_cmdline" ]]; then
     return 255
