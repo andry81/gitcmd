@@ -1,4 +1,7 @@
 2024.07.03:
+* fixed: git_filter_branch_remove_paths.sh: `.gitignore` synchronization must use new graph (mapped) parent commits instead of old graph
+
+2024.07.03:
 * new: git_filter_branch_remove_paths.sh: `--sync-gitignore-submodule-paths`, `-I` flags to synchronize `.gitignore` for paths removed from `.gitmodules`
 
 2024.07.02:

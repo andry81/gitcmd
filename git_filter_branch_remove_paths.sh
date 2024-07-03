@@ -367,6 +367,11 @@ function git_filter_branch_remove_paths()
 
   function _0FFCA2F7_exec()
   {
+    # NOTE:
+    #   Uncomment for debug breakpoint per each commit rewrite, to resume cd into repository root and create `.git-rewrite/!` subdirectory.
+    #
+    #trap "echo $'\n'"$PWD"; while [[ ! -d '../!' ]]; do sleep 1; done; rmdir '../!'; trap - RETURN" RETURN
+
     # init
     local path_arr
     eval path_arr=($path_list_cmdline)
@@ -539,11 +544,16 @@ function git_filter_branch_remove_paths()
           esac
         done < '../../.git-rewrite/commit'
 
+        # map parent commit hash to a rewrited parent commit hash
+        if [[ -f "../../.git-rewrite/map/$parent" ]]; then
+          IFS=$'\r\n' read parent < "../../.git-rewrite/map/$parent"
+        fi
+
         #echo "commit: $tree $parent"
 
         # create second temporary directory to generate `.gitignore` from the previous commit
-        local commit_parent_tmp_dir="../../.git-rewrite/commit-parent/$parent/tmp"
-        local commit_parent_tree_dir="../../.git-rewrite/commit-parent/$parent/tree"
+        local commit_parent_tmp_dir="../../.git-rewrite/filter-cache/$parent/tmp"
+        local commit_parent_tree_dir="../../.git-rewrite/filter-cache/$parent/tree"
 
         mkdir -p "$commit_parent_tmp_dir"
 
@@ -724,7 +734,6 @@ function git_filter_branch_remove_paths()
     _0FFCA2F7_eval="$_0FFCA2F7_eval${_0FFCA2F7_eval:+$'\n\n'}function $(declare -f $func)"
   done
 
-  #call git filter-branch --index-filter 'while (( 1 )); do :; done' "$@"
   call git filter-branch --index-filter 'eval "$_0FFCA2F7_eval"; _0FFCA2F7_exec' "$@"
 }
 
