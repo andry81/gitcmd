@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # Description:
-#   Script to cleanup artefacts after using `git filter-branch` command.
+#   Script to cleanup all `refs/original/refs` references.
 
 # Usage:
-#   git_cleanup_filter_branch.sh
+#   git_cleanup_original_refs.sh
 #
 
 # Script both for execution and inclusion.
@@ -24,7 +24,7 @@ function evalcall()
   eval "$@"
 }
 
-function git_cleanup_filter_branch()
+function git_cleanup_original_refs()
 {
   # print all refs
   call git show-ref || return 255
@@ -35,12 +35,12 @@ function git_cleanup_filter_branch()
 }
 
 # shortcut
-function git_cl_flb()
+function git_cl_or_rs()
 {
-  git_cleanup_filter_branch "$@"
+  git_cleanup_original_refs "$@"
 }
 
 if [[ -z "$BASH_LINENO" || BASH_LINENO[0] -eq 0 ]]; then
   # Script was not included, then execute it.
-  git_cleanup_filter_branch "$@"
+  git_cleanup_original_refs "$@"
 fi

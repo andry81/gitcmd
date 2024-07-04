@@ -1,4 +1,8 @@
 2024.07.04:
+* new: git_cleanup_original_refs.sh, git_cleanup_replace_refs.sh: standalone scripts to cleanup all `refs/original/refs` and `refs/replace` references respectively
+* changed: git_cleanup_filter_branch.sh, git_cleanup_filter_repo.sh: common implementation
+
+2024.07.04:
 * new: git_filter_branch_remove_paths.sh: `ENABLE_GIT_FILTER_REWRITE_DEBUG` environment variable to debug each commit rewrite
 * changed: git_filter_branch_remove_paths.sh: renamed flag `S` to lowercase `m`, `I` to lowercase variant (to highlight that these are not an option with the argument)
 * changed: git_filter_branch_remove_paths.sh: use `.git-filter-cache` temporary directory instead of `.git-rewrite/filter-cache` to reuse the filter output after the `git filter-branch ...` command exit
