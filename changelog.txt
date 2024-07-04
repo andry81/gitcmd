@@ -1,3 +1,6 @@
+2024.07.04:
+* fixed: git_init.sh: minor fixup
+
 2024.07.03:
 * fixed: git_filter_branch_remove_paths.sh: `.gitignore` synchronization must use new graph (mapped) parent commits instead of old graph
 

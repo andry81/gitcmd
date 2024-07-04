@@ -157,7 +157,7 @@ function git_init()
         value="${value#*=}"
 
         if [[ -z "$name" || -z "$var" || -z "$value" ]]; then
-          echo "$0: error: invalid `remote` argument: \`$arg\`" >&2
+          echo "$0: error: invalid \`remote\` argument: \`$arg\`" >&2
           return 255
         fi
 
