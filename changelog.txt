@@ -1,4 +1,9 @@
 2024.07.04:
+* new: git_filter_branch_remove_paths.sh: `ENABLE_GIT_FILTER_REWRITE_DEBUG` environment variable to debug each commit rewrite
+* changed: git_filter_branch_remove_paths.sh: renamed flag `S` to lowercase `m`, `I` to lowercase variant (to highlight that these are not an option with the argument)
+* changed: git_filter_branch_remove_paths.sh: use `.git-filter-cache` temporary directory instead of `.git-rewrite/filter-cache` to reuse the filter output after the `git filter-branch ...` command exit
+
+2024.07.04:
 * fixed: git_init.sh: minor fixup
 
 2024.07.03:

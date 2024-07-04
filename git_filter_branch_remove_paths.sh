@@ -21,7 +21,7 @@
 #     -r
 #       Use `git rm -r` respectively instead. Is not applicable for the `--i0`
 #       and `--i1`.
-#     -S
+#     -m
 #     --remove-submodules
 #       Remove submodule paths using `.gitmodules` file and the skip
 #       filter from `--skip-submodule-*` option.
@@ -36,7 +36,7 @@
 #       Skip submodule remove for path with prefix (no globbing).
 #       Has no effect if `--remove-submodules` flag is not used.
 #       Has no effect if `.gitmodules` is in path list.
-#     -I
+#     -i
 #     --sync-gitignore-submodule-paths
 #       Synchronize `.gitignore` for paths removed from `.gitmodules`.
 #       Has no effect if `.gitignore` is in path list.
@@ -78,6 +78,13 @@
 # NOTE:
 #   All `--i*` flags does operate on the Git commit in the index
 #   (`--index-filter`) instead of on a checkouted commit (`--tree-filter`).
+
+# NOTE:
+#   Create `ENABLE_GIT_FILTER_REWRITE_DEBUG=1` environment variable to
+#   breakpoint per each `_0FFCA2F7_exec` function execution.
+#   To resume change directory into the repository root and create
+#   `.git-filter-cache/!` subdirectory.
+#
 
 # Examples:
 #   >
@@ -205,12 +212,12 @@ function git_filter_branch_remove_paths()
           flag_f=1
         elif [[ "${flag:0:1}" == 'r' ]]; then
           flag_r=1
-        elif [[ "${flag:0:1}" == 'S' ]]; then
+        elif [[ "${flag:0:1}" == 'm' ]]; then
           flag_remove_submodules=1
         elif [[ "${flag:0:1}" == 'P' ]]; then
           option_skip_submodule_path_prefix_arr[${#option_skip_submodule_path_prefix_arr[@]}]="$2"
           shift
-        elif [[ "${flag:0:1}" == 'I' ]]; then
+        elif [[ "${flag:0:1}" == 'i' ]]; then
           flag_sync_gitignore_submodule_paths=1
         else
           echo "$0: error: invalid flag: \`${flag:0:1}\`" >&2
@@ -224,6 +231,16 @@ function git_filter_branch_remove_paths()
 
     flag="$1"
   done
+
+  if [[ ! -d '.git' ]]; then
+    echo "$0: error: script must be run in a Working Copy root directory." >&2
+    return 1
+  fi
+
+  if [[ -d '.git-filter-cache' ]]; then
+    echo "$0: error: remove \`.git-filter-cache\` directory before continue." >&2
+    return 2
+  fi
 
   if [[ "$1" == '//' ]]; then
     shift
@@ -365,12 +382,25 @@ function git_filter_branch_remove_paths()
     option_skip_submodule_paths_cmdline="$option_skip_submodule_paths_cmdline \"$arg\""
   done
 
+  function _0FFCA2F7_cleanup()
+  {
+    if [[ -d '.git-filter-cache' ]]; then
+      rm -rf '.git-filter-cache'
+    fi
+  }
+
+  mkdir '.git-filter-cache'
+
+  trap "_0FFCA2F7_cleanup; trap - RETURN" RETURN
+
   function _0FFCA2F7_exec()
   {
-    # NOTE:
-    #   Uncomment for debug breakpoint per each commit rewrite, to resume cd into repository root and create `.git-rewrite/!` subdirectory.
-    #
-    #trap "echo $'\n'"$PWD"; while [[ ! -d '../!' ]]; do sleep 1; done; rmdir '../!'; trap - RETURN" RETURN
+    if [[ ! -d '../../.git' || ! -d '../../.git-filter-cache' ]]; then
+      echo $'\n'"$0: error: wrong current directory assumption." >&2
+      return 255
+    fi
+
+    trap "if (( ENABLE_GIT_FILTER_REWRITE_DEBUG )); then echo $'\n'\"$PWD\"; while [[ ! -d '../../.git-filter-cache/!' ]]; do sleep 1; done; rmdir '../../.git-filter-cache/!'; fi; trap - RETURN" RETURN
 
     # init
     local path_arr
@@ -552,8 +582,8 @@ function git_filter_branch_remove_paths()
         #echo "commit: $tree $parent"
 
         # create second temporary directory to generate `.gitignore` from the previous commit
-        local commit_parent_tmp_dir="../../.git-rewrite/filter-cache/$parent/tmp"
-        local commit_parent_tree_dir="../../.git-rewrite/filter-cache/$parent/tree"
+        local commit_parent_tmp_dir="../../.git-filter-cache/commit/$parent/tmp"
+        local commit_parent_tree_dir="../../.git-filter-cache/commit/$parent/tree"
 
         mkdir -p "$commit_parent_tmp_dir"
 
