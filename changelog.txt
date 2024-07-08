@@ -1,3 +1,11 @@
+2024.07.10:
+* new: git_filter_branch_remove_paths.sh: `--prune-empty`, `-p` flags to generate replace references to prune the empty commits after a filter apply (does not prune commits with children above the commits filter range expression)
+* new: git_filter_branch_remove_paths.sh: `--finalize`, `-z` flags to finalize changes and apply replace references just after the replace references generation
+* new: KNOWN_ISSUES.txt: known issues file
+* changed: git_filter_branch_remove_paths.sh: improved `--sync-gitignore-submodule-paths` flag implementaion in case of merge commits and collect `.gitignore` difference from all parent commits
+* changed: git_filter_branch_remove_paths.sh: improved performance by usage of `git show` instead of `git diff-index` + `patch`
+* changed: git_filter_branch_remove_paths.sh: code improvements
+
 2024.07.08:
 * refactor: minor refactor
 

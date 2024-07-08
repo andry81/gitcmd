@@ -54,6 +54,34 @@
 #         The command line path list does remove unconditionally and so does
 #         not affect the paths in the `.gitignore` leaving them unchanged.
 #         You must use this flag to reflect the changes into the file.
+#     -p
+#     --prune-empty
+#       Generate replace references to prune the empty commits after they
+#       become empty because of the `git filter-branch ...` command apply.
+#       NOTE:
+#         This has different behaviour versus the
+#         `git filter-branch --prune-empty ...` as the latter prunes all the
+#         empty commits including those which were empty before the rewrite.
+#       CAUTION:
+#         Does not generate replace references for the empty commits under the
+#         most top reference(s) from the filtered range expression, so won't be
+#         removed those last commits which is pointed by these.
+#         This is by design because the prunning algorithm is based on
+#         `git replace --graft` command and it requires to access a commit
+#         above the commits filtered range to prune (bypass) the empty commit
+#         in the filtered range.
+#         To still remove such commits, you must execute the
+#         `git filter-branch --prune-empty` command with at least the same
+#         (or may be with the modificated one to select the rewrited range)
+#         commits filter range expression manually after the script.
+#     -z
+#     --finalize
+#       Finalizes changes and applies replace references just after the replace
+#       references generation.
+#       Executes `git filter-branch` command to apply replace references in
+#       case of `--prune-empty` flag.
+#       Has no effect if `--prune-empty` is not used.
+#       Has no effect if nothing to finalize.
 #
 #   //:
 #     Separator to stop parse flags.
@@ -127,6 +155,16 @@
 #   >
 #   cd myrepo/path
 #   git_filter_branch_remove_paths.sh ... // -- t1^!
+#
+#   # To update all commits by branch `master` to update first commit(s) in all
+#   # ancestor branches to remove `.gitmodules`, all modules paths,
+#   # reflects changes into the `.gitignore`, generates replace references to
+#   # prune the empty commits after the filter apply (not all empty commits,
+#   # see details for the `-p` flag) and finalizes the result by applying the
+#   # replace references.
+#   >
+#   cd myrepo/path
+#   git_filter_branch_remove_paths.sh -mipz // // -- master
 
 # CAUTION:
 #   In a generic case the `rev-list` parameter of the `git filter-branch`
@@ -148,7 +186,7 @@
 #   always select a single commit in any tree.
 
 # CAUTION:
-#   If a file already exist in a being updated commit or in a commit
+#   If a file already exists in a being updated commit or in a commit
 #   child/children and has changes, then the script does remove an existing
 #   file including children commits changes. This means that the changes in
 #   all child branches would be lost.
@@ -159,6 +197,9 @@
 # NOTE:
 #   You must use `git_cleanup_filter_branch.sh` script to cleanup the
 #   repository from intermediate references.
+#
+#   If `--prune-empty` flag is used together with `--finalize` flag, then to
+#   remove the replace references use `git_cleanup_replace_refs.sh` script.
 
 # Script both for execution and inclusion.
 [[ -n "$BASH" ]] || return 0 || exit 0 # exit to avoid continue if the return can not be called
@@ -180,6 +221,8 @@ function git_filter_branch_remove_paths()
   export flag_remove_submodules=0
   local option_skip_submodule_path_prefix_arr=()
   export flag_sync_gitignore_submodule_paths=0
+  export flag_prune_empty=0
+  export flag_finalize=0
   local skip_flag
 
   while [[ "${flag:0:1}" == '-' ]]; do
@@ -205,6 +248,12 @@ function git_filter_branch_remove_paths()
     elif [[ "$flag" == '-sync-gitignore-submodule-paths' ]]; then
       flag_sync_gitignore_submodule_paths=1
       skip_flag=1
+    elif [[ "$flag" == '-prune-empty' ]]; then
+      flag_prune_empty=1
+      skip_flag=1
+    elif [[ "$flag" == '-finalize' ]]; then
+      flag_finalize=1
+      skip_flag=1
     elif [[ "${flag:0:1}" == '-' ]]; then
       echo "$0: error: invalid flag: \`$flag\`" >&2
       return 255
@@ -224,6 +273,10 @@ function git_filter_branch_remove_paths()
           shift
         elif [[ "${flag:0:1}" == 'i' ]]; then
           flag_sync_gitignore_submodule_paths=1
+        elif [[ "${flag:0:1}" == 'p' ]]; then
+          flag_prune_empty=1
+        elif [[ "${flag:0:1}" == 'z' ]]; then
+          flag_finalize=1
         else
           echo "$0: error: invalid flag: \`${flag:0:1}\`" >&2
           return 255
@@ -287,11 +340,10 @@ function git_filter_branch_remove_paths()
       ;;
   esac
 
-  local arg
+  local arg arg_index
   local args=("$@")
   export path_list_cmdline=''
   local num_args=${#args[@]}
-  local i
   local old_shopt
 
   case "$OSTYPE" in
@@ -311,8 +363,8 @@ function git_filter_branch_remove_paths()
 
   local has_cmdline_separator=0
 
-  for (( i=0; i < num_args; i++ )); do
-    arg="${args[i]}"
+  for (( arg_index=0; arg_index < num_args; arg_index++ )); do
+    arg="${args[arg_index]}"
 
     if [[ "$arg" == '//' ]]; then
       has_cmdline_separator=1
@@ -360,7 +412,7 @@ function git_filter_branch_remove_paths()
       {
         local IFS mode hash stage path
 
-        git ls-files -s "${path_arr[@]}" | {
+        git ls-files -sc "${path_arr[@]}" | {
           while IFS=$' \t' read mode hash stage path; do
             echo "0 0000000000000000000000000000000000000000	$path"
           done | git update-index --index-info
@@ -397,6 +449,49 @@ function git_filter_branch_remove_paths()
 
   mkdir '.git-filter-cache'
 
+  if (( flag_prune_empty )); then
+    export empty_parent_commit_list_file='.git-filter-cache/empty_parent_commits' # format: <not-yet-rewritten-commit> <empty-rewritten-single-parent>
+    echo -n > ".git-filter-cache/empty_parent_commits"
+  fi
+
+  function _0FFCA2F7_debugbreak()
+  {
+    while [[ ! -d '../../.git-filter-cache/!' ]]; do
+      sleep 1;
+    done
+
+    # NOTE:
+    #   The loop is required to avoid error: `rmdir: failed to remove '../../.git-filter-cache/!': Device or resource busy`
+    #
+    while [[ -d '../../.git-filter-cache/!' ]]; do
+      rmdir '../../.git-filter-cache/!'
+      sleep 1
+    done
+  }
+
+  function _0FFCA2F7_exec_ENTER()
+  {
+    if (( ENABLE_GIT_FILTER_REWRITE_DEBUG )); then
+      echo $'\n'"$PWD"
+      _0FFCA2F7_debugbreak
+    fi
+  }
+
+  function _0FFCA2F7_exec_RETURN()
+  {
+    # on last handler return
+    if (( ${#_0FFCA2F7_exec_revs_arr[@]} == _0FFCA2F7_exec_index + 1 )); then
+      # CAUTION:
+      #   Can not be moved because `git filter-branch` command does use the file after the last handler call
+      #
+      cp -R '../../.git-rewrite/map' '../../.git-filter-cache'
+
+      if (( ENABLE_GIT_FILTER_REWRITE_DEBUG )); then
+        _0FFCA2F7_debugbreak
+      fi
+    fi
+  }
+
   function _0FFCA2F7_exec()
   {
     if [[ ! -d '../../.git' || ! -d '../../.git-filter-cache' ]]; then
@@ -404,9 +499,26 @@ function git_filter_branch_remove_paths()
       return 255
     fi
 
-    trap "\
-if (( ENABLE_GIT_FILTER_REWRITE_DEBUG )); then echo $'\n'\"$PWD\"; while [[ ! -d '../../.git-filter-cache/!' ]]; do sleep 1; done; \
-while [[ -d '../../.git-filter-cache/!' ]]; do rmdir '../../.git-filter-cache/!'; sleep 1; done; fi; trap - RETURN" RETURN
+    # copy revs file
+    if [[ ! -f '../../.git-filter-cache/revs' ]]; then
+      cp '../../.git-rewrite/revs' '../../.git-filter-cache'
+    fi
+
+    # must be global between calls
+    if [[ -n "${_0FFCA2F7_exec_index+x}" ]]; then
+      (( _0FFCA2F7_exec_index++ ))
+    else
+      _0FFCA2F7_exec_index=0
+      _0FFCA2F7_exec_revs_arr=()
+      local revs
+      while IFS=$'\r\n' read -r revs; do # IFS - with trim trailing line feeds
+        _0FFCA2F7_exec_revs_arr[${#_0FFCA2F7_exec_revs_arr[@]}]="$revs"
+      done < '../../.git-filter-cache/revs'
+    fi
+
+    trap "_0FFCA2F7_exec_RETURN; trap - RETURN" RETURN
+
+    _0FFCA2F7_exec_ENTER
 
     # init
     local path_arr
@@ -425,7 +537,7 @@ while [[ -d '../../.git-filter-cache/!' ]]; do rmdir '../../.git-filter-cache/!'
     local path
 
     # checkout `.gitmodules`, filter and remove submodule paths
-    IFS=$'\r\n' read path < <(git ls-files ".gitmodules")
+    IFS=$'\r\n' read path < <(git ls-files -c ".gitmodules") # IFS - with trim trailing line feeds
 
     if [[ -z "$path" ]]; then
       return 0
@@ -443,9 +555,6 @@ while [[ -d '../../.git-filter-cache/!' ]]; do rmdir '../../.git-filter-cache/!'
     local num_submodule_paths=0
 
     local LR EOL line key value
-
-    local filtered_lines filtered_section_lines
-    local do_collect_prev_section
 
     # WORKAROUND:
     #   The EOL special workaround using `printf` is for the Bash issue behind
@@ -469,7 +578,8 @@ while [[ -d '../../.git-filter-cache/!' ]]; do rmdir '../../.git-filter-cache/!'
       LR="${LR//[^$'\r\n']/}"
     fi
 
-    do_collect_prev_section=1
+    local filtered_lines filtered_section_lines
+    local do_collect_prev_section=1
 
     while IFS=$'\r\n' read -r line; do # IFS - with trim trailing line feeds
       printf -v EOL "%02X" "\"${line: -1}"
@@ -530,7 +640,7 @@ while [[ -d '../../.git-filter-cache/!' ]]; do rmdir '../../.git-filter-cache/!'
       filtered_lines="$filtered_lines$filtered_section_lines"
     fi
 
-    # update `.gitmodules` and it's index, remove `.gitmodules` after all module paths
+    # update `.gitmodules` and the index, otherwise remove `.gitmodules` if all module paths is removed
     if (( num_submodule_remove_paths == num_submodule_paths )); then
       path_arr=("${path_arr[@]}" '.gitmodules')
     else
@@ -552,93 +662,154 @@ while [[ -d '../../.git-filter-cache/!' ]]; do rmdir '../../.git-filter-cache/!'
       path_arr=()
     fi
 
-    # synchronize `.gitignore` for paths removed from `.gitmodules`
-    if (( flag_sync_gitignore_submodule_paths && ! has_gitignore_in_path_list )); then
-      IFS=$'\r\n' read path < <(git ls-files ".gitignore")
+    # NOTE:
+    #   We will collect empty commits at the end, after the `.gitignore` update
+    #
+    local graft
+    eval graft=(${_0FFCA2F7_exec_revs_arr[_0FFCA2F7_exec_index]})
 
-      if [[ -n "$path" ]] && git checkout-index -- '.gitignore'; then
-        # read commit blob file
-        local tree parent
+    # NOTE:
+    #   1. `.gitignore` can be synchronized ONLY when exists at least one parent commit.
+    #   2. Empty commits can be counted as changed to empty ONLY when they are visited as parent commit to a being indexed commit
+    #      and when the mapped commit (rewrited or cloned with applied changes) for this parent commit exists, otherwise there is nothing to graft with to prune (bypass) them
+    #      (`git replace --graft <commit> <parents>...` requires `<parents>` to be already mapped).
 
-        while IFS=$'\r\n' read -r line; do # IFS - with trim trailing line feeds
-          printf -v EOL "%02X" "\"${line: -1}"
-          if [[ "$EOL" == '0D' ]]; then
-            line="${line:0:-1}"
+    # update parents and collect emptied parent commits if `--prune-empty` is used
+    local graft_index parent
+    local num_grafts=${#graft[@]}
+    local commit="${graft[0]}"
+
+    for (( graft_index=num_grafts; --graft_index > 0; )); do
+      parent="${graft[graft_index]}"
+
+      # read mapped parent commit hash (rewrited or cloned with applied changes)
+      if [[ -f "../../.git-rewrite/map/$parent" ]]; then
+        IFS=$'\r\n' read -r parent < "../../.git-rewrite/map/$parent" # IFS - with trim trailing line feeds
+
+        # We must collect only those empty commits which has been rewriten because of the filter apply.
+        #
+        # NOTE:
+        #   The empty commits above the filtered range won't be collected here.
+        #
+        if (( flag_prune_empty )); then
+          if git diff --quiet "$parent^!"; then
+            echo "$commit $parent" >> "../../$empty_parent_commit_list_file"
           fi
-          line="${line//[$'\r\n']/}"
-
-          IFS=$' \t' read -r key value <<< "$line"
-
-          case "$key" in
-            'tree')
-               tree="$value"
-               ;;
-            'parent')
-               parent="$value"
-               break
-               ;;
-          esac
-        done < '../../.git-rewrite/commit'
-
-        # map parent commit hash to a rewrited parent commit hash
-        if [[ -f "../../.git-rewrite/map/$parent" ]]; then
-          IFS=$'\r\n' read parent < "../../.git-rewrite/map/$parent"
         fi
 
-        #echo "commit: $tree $parent"
+        # update graft array
+        graft[graft_index]="$parent"
+      fi
+    done
 
-        # create second temporary directory to generate `.gitignore` from the previous commit
-        local commit_parent_tmp_dir="../../.git-filter-cache/commit/$parent/tmp"
-        local commit_parent_tree_dir="../../.git-filter-cache/commit/$parent/tree"
+    # synchronize `.gitignore` for paths removed from `.gitmodules`
+    if (( flag_sync_gitignore_submodule_paths && ! has_gitignore_in_path_list && ${#graft[@]} > 1 )); then
+      local commit_path
 
-        mkdir -p "$commit_parent_tmp_dir"
+      IFS=$'\r\n' read commit_path < <(git ls-files -c ".gitignore") # IFS - with trim trailing line feeds
 
-        if git diff-index --cached -U -p "$parent" -- '.gitignore' > "$commit_parent_tmp_dir/.gitignore.patch"; then
-          if [[ -s "$commit_parent_tmp_dir/.gitignore.patch" ]]; then
-            mkdir "$commit_parent_tree_dir"
+      if [[ -n "$commit_path" ]] && git checkout-index -- '.gitignore'; then
+        commit="${graft[0]}"
 
-            patch -u -R -p1 -s -o "$PWD/$commit_parent_tree_dir/.gitignore" '.gitignore' "$commit_parent_tmp_dir/.gitignore.patch"
+        # read first line return character in case of Windows text format
+        IFS='' read -r LR < ".gitignore"
+        printf -v EOL "%02X" "\"${LR: -1}"
+        if [[ "$EOL" == '0D' ]]; then
+          printf -v LR "%s\r" "${LR//[^$'\r\n']/}"
+        else
+          LR="${LR//[^$'\r\n']/}"
+        fi
 
-            # read first line return character in case of Windows text format
-            IFS='' read -r LR < ".gitignore"
-            printf -v EOL "%02X" "\"${LR: -1}"
+        # create temporary directory to rebuild and collect `.gitignore` from all parents
+        local commit_tmp_dir="../../.git-filter-cache/commits/$commit"
+        local has_parent_gitignore=0
+
+        mkdir -p "$commit_tmp_dir"
+
+        # NOTE:
+        #   We have to collect the `.gitignore` differences in reverse parent order because
+        #   the removed lines does insert immediately after the upper bound line.
+        #
+        for (( graft_index=num_grafts; --graft_index > 0; )); do
+          parent="${graft[graft_index]}"
+
+          if ! git show "$parent:.gitignore" 2>/dev/null > "$commit_tmp_dir/.gitignore"; then
+            continue
+          fi
+
+          if (( ! has_parent_gitignore )); then
+            # begin accumulation on first existed in a parent commit
+            cp -T '.gitignore' "$commit_tmp_dir/.gitignore.accum"
+            has_parent_gitignore=1
+          fi
+
+          # Finds paths in the `.gitignore` of a parent commit which is not in the indexed `.gitignore` and
+          # not in the accumulated `.gitignore` initially copied from the index, then adds them to the accumulated `.gitignore`
+          # per each parent commit by the upper bound line taken from the indexed `.gitignore` file if the path is not indexed.
+
+          local line_index prev_line
+          local parent_line raw_parent_line
+          local removed_trimmed_line_arr=()           # array of removed trimmed lines (existed only in the parent)
+          local removed_line_arr=()                   # array of removed not trimmed lines (existed only in the parent)
+          local to_insert_after_existed_line_arr=()   # upper bound (last) existed (in both files) lines per each removed line (to insert after)
+          local to_insert_after_existed_line
+          local is_line_found
+          local num_lines
+
+          # collect lines from a parent commit `.gitignore` been removed in the indexed `.gitignore`
+          while IFS=$'\r\n' read -r parent_line; do # IFS - with trim trailing line feeds
+            printf -v EOL "%02X" "\"${parent_line: -1}"
             if [[ "$EOL" == '0D' ]]; then
-              printf -v LR "%s\r" "${LR//[^$'\r\n']/}"
-            else
-              LR="${LR//[^$'\r\n']/}"
+              parent_line="${parent_line:0:-1}"
+            fi
+            parent_line="${parent_line//[$'\r\n']/}"
+
+            # not trimmed line
+            raw_parent_line="$parent_line"
+
+            while [[ "${parent_line: -1}" =~ [[:space:]] ]]; do parent_line="${parent_line:0:-1}"; done # trim trailing white spaces
+            while [[ "${parent_line:0:1}" =~ [[:space:]] ]]; do parent_line="${parent_line:1}"; done # trim leading white spaces
+
+            # skip blank and comment lines in the parent `.gitignore`
+            if [[ -z "$parent_line" || "${parent_line:0:1}" == '#' ]]; then
+              continue
             fi
 
-            # Find paths in the `.gitignore` of the parent commit which is not in the file of the index, then
-            # add them to the `.gitignore` in the working tree if a path is not a part of the updated index.
-            echo -n > "$commit_parent_tmp_dir/.gitignore.new"
+            is_line_found=0
 
-            local parent_line raw_parent_line
-            local removed_line_arr=()                   # array of removed lines (existed only in the parent)
-            local to_insert_after_existed_line_arr=()   # upper bound (last) existed (in both files) lines per each removed line (to insert after)
-            local to_insert_after_existed_line
-            local is_line_found
-            local i num_lines
-
-            # collect lines from parent `.gitignore` been removed in the indexed `.gitignore`
-            while IFS=$'\r\n' read -r parent_line; do # IFS - with trim trailing line feeds
-              printf -v EOL "%02X" "\"${parent_line: -1}"
+            while IFS=$'\r\n' read -r line; do # IFS - with trim trailing line feeds
+              printf -v EOL "%02X" "\"${line: -1}"
               if [[ "$EOL" == '0D' ]]; then
-                parent_line="${parent_line:0:-1}"
+                line="${line:0:-1}"
               fi
-              parent_line="${parent_line//[$'\r\n']/}"
+              line="${line//[$'\r\n']/}"
 
-              # not trimmed line
-              raw_parent_line="$parent_line"
+              while [[ "${line: -1}" =~ [[:space:]] ]]; do line="${line:0:-1}"; done # trim trailing white spaces
+              while [[ "${line:0:1}" =~ [[:space:]] ]]; do line="${line:1}"; done # trim leading white spaces
 
-              while [[ "${parent_line: -1}" =~ [[:space:]] ]]; do parent_line="${parent_line:0:-1}"; done # trim trailing white spaces
-              while [[ "${parent_line:0:1}" =~ [[:space:]] ]]; do parent_line="${parent_line:1}"; done # trim leading white spaces
-
-              # skip blank and comment lines in the parent `.gitignore`
-              if [[ -z "$parent_line" || "${parent_line:0:1}" == '#' ]]; then
-                continue
+              if [[ "$line" == "$parent_line" ]]; then
+                is_line_found=1
+                break
               fi
+            done < '.gitignore'
 
+            if (( ! is_line_found )); then
+              removed_trimmed_line_arr=("${removed_trimmed_line_arr[@]}" "$parent_line") # trimmed line
+              removed_line_arr=("${removed_line_arr[@]}" "$raw_parent_line") # not trimmed line
+              to_insert_after_existed_line_arr=("${to_insert_after_existed_line_arr[@]}" "$to_insert_after_existed_line") # trimmed line
+            else
+              to_insert_after_existed_line="$line" # trimmed line
+            fi
+          done < "$commit_tmp_dir/.gitignore"
+
+          # remove lines already existed in the accumulated `.gitignore` in case of a merge commit
+          if (( ${#graft[@]} > 2 )); then
+            num_lines=${#removed_line_arr[@]}
+
+            for (( line_index=0; line_index < num_lines; )); do
               is_line_found=0
+
+              parent_line="${removed_trimmed_line_arr[line_index]}"  # trimmed line
 
               while IFS=$'\r\n' read -r line; do # IFS - with trim trailing line feeds
                 printf -v EOL "%02X" "\"${line: -1}"
@@ -650,114 +821,141 @@ while [[ -d '../../.git-filter-cache/!' ]]; do rmdir '../../.git-filter-cache/!'
                 while [[ "${line: -1}" =~ [[:space:]] ]]; do line="${line:0:-1}"; done # trim trailing white spaces
                 while [[ "${line:0:1}" =~ [[:space:]] ]]; do line="${line:1}"; done # trim leading white spaces
 
-                if [[ "$line" == "$parent_line" ]]; then
+                # skip blank and comment lines in the accumulated `.gitignore`
+                if [[ -z "$line" || "${line:0:1}" == '#' ]]; then
+                  continue
+                fi
+
+                if [[ "$parent_line" == "$line" ]]; then
                   is_line_found=1
+
+                  # remove from list
+                  if (( line_index )); then
+                    removed_trimmed_line_arr=("${removed_trimmed_line_arr[@]:0:line_index-1}" "${removed_trimmed_line_arr[@]:line_index+1}")
+                    removed_line_arr=("${removed_line_arr[@]:0:line_index-1}" "${removed_line_arr[@]:line_index+1}")
+                    to_insert_after_existed_line_arr=("${to_insert_after_existed_line_arr[@]:0:line_index-1}" "${to_insert_after_existed_line_arr[@]:line_index+1}")
+                  else
+                    removed_trimmed_line_arr=("${removed_trimmed_line_arr[@]:line_index+1}")
+                    removed_line_arr=("${removed_line_arr[@]:line_index+1}")
+                    to_insert_after_existed_line_arr=("${to_insert_after_existed_line_arr[@]:line_index+1}")
+                  fi
+
                   break
                 fi
-              done < '.gitignore'
+              done < "$commit_tmp_dir/.gitignore.accum"
 
               if (( ! is_line_found )); then
-                removed_line_arr=("${removed_line_arr[@]}" "$raw_parent_line") # not trimmed line
-                to_insert_after_existed_line_arr=("${to_insert_after_existed_line_arr[@]}" "$to_insert_after_existed_line") # trimmed line
-              else
-                to_insert_after_existed_line="$line" # trimmed line
+                (( line_index++ ))
               fi
-            done < "$commit_parent_tree_dir/.gitignore"
-
-            # insert lines been removed from the parent `.gitignore` but without upper bound lines
-            num_lines=${#removed_line_arr[@]}
-
-            for (( i=0; i < num_lines; i++ )); do
-              if [[ -n "${to_insert_after_existed_line_arr[i]}" ]]; then
-                break
-              fi
-
-              parent_line="${removed_line_arr[i]}"
-              path="$parent_line"
-
-              # convert absolute path to relative
-              if [[ "${path:0:1}" == '/' ]]; then
-                path=".$path"
-              fi
-
-              # insert if not in the index
-              IFS=$'\r\n' read path < <(git ls-files "$path")
-              if [[ -z "$path" ]]; then
-                echo "$parent_line$LR"
-              fi
-            done >> "$commit_parent_tmp_dir/.gitignore.new"
-
-            # update arrays
-            if (( i )); then
-              removed_line_arr=("${removed_line_arr[@]:i}")
-              to_insert_after_existed_line_arr=("${to_insert_after_existed_line_arr[@]:i}")
-            fi
-
-            local prev_line
-
-            num_lines=${#removed_line_arr[@]} # no array resize after this point
-
-            # Generate new `.gitignore` using indexed `.gitignore` and the lines been removed from the parent `.gitignore`.
-            # NOTE:
-            #   We have to use the indexed `.gitignore` as a base, because the lines in the indexed `.gitignore` can be moved or edited
-            #   without addition or removement.
-            #
-            while IFS=$'\r\n' read -r line; do # IFS - with trim trailing line feeds
-              printf -v EOL "%02X" "\"${line: -1}"
-              if [[ "$EOL" == '0D' ]]; then
-                line="${line:0:-1}"
-              fi
-              line="${line//[$'\r\n']/}"
-
-              while [[ "${line: -1}" =~ [[:space:]] ]]; do line="${line:0:-1}"; done # trim trailing white spaces
-              while [[ "${line:0:1}" =~ [[:space:]] ]]; do line="${line:1}"; done # trim leading white spaces
-
-              if [[ -n "$prev_line" && "$prev_line" != "$line" ]]; then
-                # insert lines been removed from the parent `.gitignore` with upper bound line equal to previous trimmed line
-                for (( i=0; i < num_lines; i++ )); do
-                  if [[ "${to_insert_after_existed_line_arr[i]}" != "$prev_line" ]]; then
-                    continue
-                  fi
-
-                  parent_line="${removed_line_arr[i]}"
-                  path="$parent_line"
-
-                  # convert absolute path to relative
-                  if [[ "${path:0:1}" == '/' ]]; then
-                    path=".$path"
-                  fi
-
-                  # insert if not in the index
-                  IFS=$'\r\n' read path < <(git ls-files "$path")
-                  if [[ -z "$path" ]]; then
-                    echo "$parent_line$LR"
-                  fi
-
-                  # update arrays without resize
-                  to_insert_after_existed_line_arr[i]=''
-                done >> "$commit_parent_tmp_dir/.gitignore.new"
-              fi
-
-              # unconditional insert
-              echo "$line$LR" >> "$commit_parent_tmp_dir/.gitignore.new"
-
-              prev_line="$line"
-            done < '.gitignore'
-
-            if cp -T "$commit_parent_tmp_dir/.gitignore.new" '.gitignore'; then
-              git update-index -- '.gitignore'
-            fi
-
-            rm -f "$commit_parent_tmp_dir/.gitignore.new"
-
-            rm -f "$commit_parent_tree_dir/.gitignore"
-            rmdir "$commit_parent_tree_dir"
+            done
           fi
+
+          # Generate new `.gitignore.new` using indexed `.gitignore` and the lines been removed from the parent `.gitignore`.
+          #
+          # NOTE:
+          #   We have to use the indexed `.gitignore` as a base, because the lines in the indexed `.gitignore` can be moved or edited
+          #   without addition or removement.
+          #
+          echo -n > "$commit_tmp_dir/.gitignore.new"
+
+          # insert lines been removed from the parent `.gitignore` and without upper bound lines
+          num_lines=${#removed_line_arr[@]}
+
+          for (( line_index=0; line_index < num_lines; line_index++ )); do
+            if [[ -n "${to_insert_after_existed_line_arr[line_index]}" ]]; then
+              break
+            fi
+
+            parent_line="${removed_line_arr[line_index]}"
+            path="$parent_line"
+
+            # convert absolute path to relative
+            if [[ "${path:0:1}" == '/' ]]; then
+              path=".$path"
+            fi
+
+            # insert if not in the index
+            IFS=$'\r\n' read path < <(git ls-files -c "$path") # IFS - with trim trailing line feeds
+            if [[ -z "$path" ]]; then
+              echo "$parent_line$LR"
+            fi
+          done >> "$commit_tmp_dir/.gitignore.new"
+
+          # update arrays
+          if (( line_index )); then
+            removed_line_arr=("${removed_line_arr[@]:line_index}")
+            to_insert_after_existed_line_arr=("${to_insert_after_existed_line_arr[@]:line_index}")
+          fi
+
+          # insert accumulated `.gitignore` lines and lines been removed from the parent `.gitignore` using upper bound lines to insert from
+          num_lines=${#removed_line_arr[@]} # no array resize after this point
+
+          local is_inserting=0
+
+          while IFS=$'\r\n' read -r line; do # IFS - with trim trailing line feeds
+            printf -v EOL "%02X" "\"${line: -1}"
+            if [[ "$EOL" == '0D' ]]; then
+              line="${line:0:-1}"
+            fi
+            line="${line//[$'\r\n']/}"
+
+            while [[ "${line: -1}" =~ [[:space:]] ]]; do line="${line:0:-1}"; done # trim trailing white spaces
+            while [[ "${line:0:1}" =~ [[:space:]] ]]; do line="${line:1}"; done # trim leading white spaces
+
+            if [[ -n "$prev_line" && "$prev_line" != "$line" ]]; then
+              # insert line with upper bound line equal to the previous trimmed line
+              for (( line_index=0; line_index < num_lines; line_index++ )); do
+                if [[ "${to_insert_after_existed_line_arr[line_index]}" != "$prev_line" ]]; then
+                  if (( is_inserting )); then
+                    break
+                  fi
+                  continue
+                fi
+
+                is_inserting=1
+
+                parent_line="${removed_line_arr[line_index]}"
+                path="$parent_line"
+
+                # convert absolute path to relative
+                if [[ "${path:0:1}" == '/' ]]; then
+                  path=".$path"
+                fi
+
+                # insert if not in the index
+                IFS=$'\r\n' read path < <(git ls-files -c "$path") # IFS - with trim trailing line feeds
+                if [[ -z "$path" ]]; then
+                  echo "$parent_line$LR"
+                fi
+
+                # update arrays without resize
+                to_insert_after_existed_line_arr[line_index]=''
+              done >> "$commit_tmp_dir/.gitignore.new"
+            fi
+
+            # unconditional insert
+            echo "$line$LR" >> "$commit_tmp_dir/.gitignore.new"
+
+            prev_line="$line"
+          done < "$commit_tmp_dir/.gitignore.accum"
+
+          # update accumulated changes
+          cp -fT "$commit_tmp_dir/.gitignore.new" "$commit_tmp_dir/.gitignore.accum"
+        done
+
+        if (( has_parent_gitignore )); then
+          mv -fT "$commit_tmp_dir/.gitignore.accum" '.gitignore'
+          git update-index -- '.gitignore'
+          rm "$commit_tmp_dir/.gitignore.new"
+        else
+          # remove `.gitignore` from the index
+          path_arr=('.gitignore')
+          _0FFCA2F7_exec_remove_ls_paths
+          path_arr=()
         fi
 
-        rm -f "$commit_parent_tmp_dir/.gitignore.patch"
-        rmdir "$commit_parent_tmp_dir"
-
+        rm -f "$commit_tmp_dir/.gitignore"
+        rmdir "$commit_tmp_dir"
         rm '.gitignore'
       fi
     fi
@@ -766,7 +964,7 @@ while [[ -d '../../.git-filter-cache/!' ]]; do rmdir '../../.git-filter-cache/!'
   # serialize all functions into exported variable
   export _0FFCA2F7_eval=''
 
-  for func in _0FFCA2F7_exec _0FFCA2F7_exec_remove_ls_paths; do
+  for func in _0FFCA2F7_exec _0FFCA2F7_exec_ENTER _0FFCA2F7_debugbreak _0FFCA2F7_exec_RETURN _0FFCA2F7_exec_remove_ls_paths; do
     _0FFCA2F7_eval="$_0FFCA2F7_eval${_0FFCA2F7_eval:+$'\n\n'}function $(declare -f $func)"
   done
 
@@ -774,6 +972,121 @@ while [[ -d '../../.git-filter-cache/!' ]]; do rmdir '../../.git-filter-cache/!'
   export FILTER_BRANCH_SQUELCH_WARNING=1
 
   call git filter-branch --index-filter 'eval "$_0FFCA2F7_eval"; _0FFCA2F7_exec' "$@"
+
+  # generate replace references to prune empty commits using `git replace --graft`
+  if [[ -s "$empty_parent_commit_list_file" ]]; then
+    if (( flag_prune_empty )); then
+      echo
+      echo 'Pruning empty commits...'
+
+      local commit_order_arr=()
+      local commit_regraft_parents_dict
+      local commit_regraft_parents parent_regraft_parents
+      local num_commits num_commit_regraft_parents
+      local graft_index commit_parent parent_parent
+
+      declare -A commit_regraft_parents_dict
+
+      while IFS=$' \t\r\n' read -r commit parent; do # IFS - with trim trailing line feeds
+        # get mapped commit
+        if [[ -f ".git-filter-cache/map/$commit" ]]; then
+          IFS=$'\r\n' read -r commit < ".git-filter-cache/map/$commit" # IFS - with trim trailing line feeds
+        fi
+
+        if [[ -z "${commit_regraft_parents_dict[$commit]+x}" ]]; then
+          graft_index=0
+          while IFS=$'\r\n' read commit_parent; do
+            if (( graft_index )); then
+              commit_regraft_parents_dict[$commit]="${commit_regraft_parents_dict[$commit]} $commit_parent"
+            else
+              commit_regraft_parents_dict[$commit]="$commit_parent"
+            fi
+            (( graft_index++ ))
+          done < <(git rev-parse "$commit^@")
+        fi
+
+        commit_regraft_parents=(${commit_regraft_parents_dict[$commit]})
+
+        if [[ -z "${commit_regraft_parents_dict[$parent]+x}" ]]; then
+          graft_index=0
+          while IFS=$'\r\n' read parent_parent; do
+            if (( graft_index )); then
+              commit_regraft_parents_dict[$parent]="${commit_regraft_parents_dict[$parent]} $parent_parent"
+            else
+              commit_regraft_parents_dict[$parent]="$parent_parent"
+            fi
+            (( graft_index++ ))
+          done < <(git rev-parse "$parent^@")
+        fi
+
+        parent_regraft_parents=(${commit_regraft_parents_dict[$parent]})
+
+        num_commit_regraft_parents="${#commit_regraft_parents[@]}"
+
+        # find parent and replace to parents of parent
+        for (( graft_index=0; graft_index < num_commit_regraft_parents; graft_index++ )); do
+          if [[ "$parent" == "${commit_regraft_parents[graft_index]}" ]]; then
+            if (( graft_index )); then
+              commit_regraft_parents=("${commit_regraft_parents[@]:0:graft_index-1}" "${parent_regraft_parents[@]}" "${commit_regraft_parents[@]:graft_index+1}")
+            else
+              commit_regraft_parents=("${parent_regraft_parents[@]}" "${commit_regraft_parents[@]:graft_index+1}")
+            fi
+            # no need to recalculate `graft_index` if `break`
+            break
+          fi
+        done
+
+        # update regrafted commit
+        commit_regraft_parents_dict[$commit]="${commit_regraft_parents[@]}"
+
+        # order the unordered dictionary by visit sequence
+        num_commits=${#commit_order_arr[@]}
+
+        if (( num_commits )); then
+          if [[ "${commit_order_arr[num_commits-1]}" != "$commit" ]]; then
+            commit_order_arr[num_commits]="$commit"
+          fi
+        else
+          commit_order_arr[num_commits]="$commit"
+        fi
+      done < "$empty_parent_commit_list_file"
+
+      # regraft in visit order
+      for commit in "${commit_order_arr[@]}"; do
+        graft=(${commit_regraft_parents_dict[$commit]})
+        echo "$commit -> ${graft[@]}"
+        git replace --graft "$commit" "${graft[@]}"
+      done
+    fi
+
+    if (( flag_finalize )); then
+      if (( flag_prune_empty )); then
+        echo
+        echo "Finalizing: applying replace references..."
+
+        # NOTE:
+        #   Drop all arguments before the `--` argument.
+        #   With the same filter range expression, all the references in the command line must be already moved.
+        #
+        args=("$@")
+        num_args=${#args[@]}
+
+        for (( arg_index=0; arg_index < num_args; arg_index++ )); do
+          arg="${args[arg_index]}"
+
+          if [[ "$arg" == '--' ]]; then
+            args=("${args[@]:arg_index+1}")
+            break
+          fi
+        done
+
+        # NOTE:
+        #   Use `-f` to avoid error: `Cannot create a new backup. A previous backup already exists in refs/original/`
+        #
+        call git filter-branch -f -- "${args[@]}"
+      fi
+    fi
+  fi
 }
 
 # shortcut

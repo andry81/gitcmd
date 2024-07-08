@@ -1,0 +1,5 @@
+git_filter_branch_remove_paths.sh:
+
+  * The `--prune-empty` flag implementation skips tags (and other references)
+    to update because `git filter-branch` command does not take them into
+    account while empty commit does generate because of a filter apply.
