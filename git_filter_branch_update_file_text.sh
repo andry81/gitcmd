@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Description:
-#   Script to update a file text from all commits in a repository
+#   Script to update a file text from commits in a repository
 #   using `git filter-branch` command.
 #   For search and replace functionality the `find` and `sed` utilities is
 #   used.

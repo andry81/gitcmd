@@ -1,3 +1,11 @@
+2024.07.08:
+* refactor: minor refactor
+
+2024.07.05:
+* fixed: git_filter_branch_remove_paths.sh: execution fixup around error `rmdir: failed to remove '../../.git-filter-cache/!': Device or resource busy` (`ENABLE_GIT_FILTER_REWRITE_DEBUG=1`)
+* changed: git_filter_branch_remove_paths.sh: added CTRL+C handler
+* changed: git_filter_branch_remove_paths.sh: suppressed `git filter-branch` warning (FILTER_BRANCH_SQUELCH_WARNING=1)
+
 2024.07.04:
 * new: git_cleanup_original_refs.sh, git_cleanup_replace_refs.sh: standalone scripts to cleanup all `refs/original/refs` and `refs/replace` references respectively
 * changed: git_cleanup_filter_branch.sh, git_cleanup_filter_repo.sh: common implementation

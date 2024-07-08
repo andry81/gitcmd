@@ -1,10 +1,11 @@
 #!/bin/bash
 
 # Usage:
-#   git_filter_branch_remove_paths.sh [<flags>] [//] <path0> [... <pathN>] // [<cmdline>]
+#   git_filter_branch_remove_paths.sh [<flags>]  // [<path0> [... <pathN>]] // [<cmdline>]
+#   git_filter_branch_remove_paths.sh [<flags>] [//] <path0> [... <pathN>]  // [<cmdline>]
 
 # Description:
-#   Script to remove paths from all commits in a repository using
+#   Script to remove paths from commits in a repository using
 #   `git filter-branch` command.
 
 #   <flags>:
@@ -29,8 +30,9 @@
 #       Has effect if `.gitmodules` is in path list, but the file does remove
 #       only when all module paths is removed.
 #       CAUTION:
-#         The command line path list does not affect module paths from the
-#         `.gitmodules`.
+#         The command line path list does remove unconditionally and so does
+#         not affect the paths in the `.gitmodules` leaving them unchanged.
+#         You must use this flag to reflect the changes into the file.
 #     -P
 #     --skip-submodule-path-prefix
 #       Skip submodule remove for path with prefix (no globbing).
@@ -42,18 +44,21 @@
 #       Has no effect if `.gitignore` is in path list.
 #       CAUTION:
 #         Is supported a very limited lines format in the `.gitignore` file:
-#           * Blank and comment lines does not restore.
+#           * Blank and comment lines does not restore to the previous.
 #           * Leading and trailing white spaces in a line does trim before
 #             check in the index.
 #           * Paths with globbing, backslashes, ranges and exclusion pattern
 #             does pass into `git ls-files` as is to detect indexed paths.
 #         See details: https://git-scm.com/docs/gitignore#_pattern_format
 #       CAUTION:
-#         The command line path list does not affect paths from the
-#         `.gitignore`.
+#         The command line path list does remove unconditionally and so does
+#         not affect the paths in the `.gitignore` leaving them unchanged.
+#         You must use this flag to reflect the changes into the file.
 #
 #   //:
 #     Separator to stop parse flags.
+#     NOTE:
+#       Is required if the command line path list is empty.
 #
 #   <path0> [... <pathN>]:
 #     Source tree relative file paths to a file/directory to remove.
@@ -384,14 +389,13 @@ function git_filter_branch_remove_paths()
 
   function _0FFCA2F7_cleanup()
   {
-    if [[ -d '.git-filter-cache' ]]; then
-      rm -rf '.git-filter-cache'
-    fi
+    rm -rf '.git-filter-cache'
   }
 
-  mkdir '.git-filter-cache'
-
   trap "_0FFCA2F7_cleanup; trap - RETURN" RETURN
+  trap "_0FFCA2F7_cleanup" SIGINT
+
+  mkdir '.git-filter-cache'
 
   function _0FFCA2F7_exec()
   {
@@ -400,7 +404,9 @@ function git_filter_branch_remove_paths()
       return 255
     fi
 
-    trap "if (( ENABLE_GIT_FILTER_REWRITE_DEBUG )); then echo $'\n'\"$PWD\"; while [[ ! -d '../../.git-filter-cache/!' ]]; do sleep 1; done; rmdir '../../.git-filter-cache/!'; fi; trap - RETURN" RETURN
+    trap "\
+if (( ENABLE_GIT_FILTER_REWRITE_DEBUG )); then echo $'\n'\"$PWD\"; while [[ ! -d '../../.git-filter-cache/!' ]]; do sleep 1; done; \
+while [[ -d '../../.git-filter-cache/!' ]]; do rmdir '../../.git-filter-cache/!'; sleep 1; done; fi; trap - RETURN" RETURN
 
     # init
     local path_arr
@@ -763,6 +769,9 @@ function git_filter_branch_remove_paths()
   for func in _0FFCA2F7_exec _0FFCA2F7_exec_remove_ls_paths; do
     _0FFCA2F7_eval="$_0FFCA2F7_eval${_0FFCA2F7_eval:+$'\n\n'}function $(declare -f $func)"
   done
+
+  # suppress warning
+  export FILTER_BRANCH_SQUELCH_WARNING=1
 
   call git filter-branch --index-filter 'eval "$_0FFCA2F7_eval"; _0FFCA2F7_exec' "$@"
 }

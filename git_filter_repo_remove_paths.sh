@@ -4,7 +4,7 @@
 #   git_filter_repo_remove_paths.sh <path0> [... <pathN>] // [<cmdline>]
 
 # Description:
-#   Script to remove paths from all commits in a repository using
+#   Script to remove paths from commits in a repository using
 #   `git filter-repo` command:
 #   https://github.com/newren/git-filter-repo
 #   https://github.com/newren/git-filter-repo/tree/HEAD/Documentation/git-filter-repo.txt

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Description:
-#   Script to replace commit message from all commits in a repository using
+#   Script to replace commit message from commits in a repository using
 #   `git filter-repo` command:
 #   https://github.com/newren/git-filter-repo
 #   https://github.com/newren/git-filter-repo/tree/HEAD/Documentation/git-filter-repo.txt

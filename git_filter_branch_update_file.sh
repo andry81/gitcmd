@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Description:
-#   Script to update (add or replace) a file from all commits in a repository
+#   Script to update (add or replace) a file from commits in a repository
 #   using `git filter-branch` command.
 #
 
