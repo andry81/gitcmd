@@ -1,3 +1,6 @@
+2024.07.12:
+* refactor: scripts: move all scripts into subdirectory
+
 2024.07.10:
 * new: git_filter_branch_remove_paths.sh: `--prune-empty`, `-p` flags to generate replace references to prune the empty commits after a filter apply (does not prune commits with children above the commits filter range expression)
 * new: git_filter_branch_remove_paths.sh: `--finalize`, `-z` flags to finalize changes and apply replace references just after the replace references generation
