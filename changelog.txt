@@ -1,5 +1,18 @@
+2025.01.08:
+* new: .github/FUNDING.yml: shared donate link
+
+2025.01.08:
+* changed: README.md: externals note
+
 2024.10.28:
 * changed: *.bat: removed all `EOT` and `SOH` control characters as EOL characters in all `for /F "... eol= ..."` statements (https://github.com/andry81/contools/issues/3 : `Batch FOR-Loops EOL relies on a rare character`)
+
+2024.07.12:
+* new: .externals: added `tacklelib` project usage in tests (without `__init__` scripts)
+* new: __init__/__init__.sh: basic initialization with config load
+* new: _config: basic config
+* new: tests: initial tests
+* changed: README_EN.txt: readme update
 
 2024.07.12:
 * refactor: scripts: move all scripts into subdirectory
