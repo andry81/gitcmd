@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Description:
-#   Script to pull all branches from a remote with the fast-foward merge only.
+#   Script to pull all branches from a remote with the fast-forward merge only.
 
 # Usage:
 #   git_pull_remotes_heads.sh <remote> [// <fetch-cmd-line>]

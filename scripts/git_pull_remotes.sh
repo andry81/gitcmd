@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Description:
-#   Script to pull either all or list of remotes with the fast-foward merge only.
+#   Script to pull either all or list of remotes with the fast-forward merge only.
 
 # Usage:
 #   git_pull_remotes.sh <default-remote> [from-remote1 [from-remote2 [...from-remoteN]]] [: branch1 [branch2 [...branchN]]] [// <fetch-cmd-line>]
