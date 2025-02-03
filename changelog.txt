@@ -1,3 +1,6 @@
+2025.02.03:
+* changed: README.md: github markdown blockquotes update
+
 2025.01.08:
 * new: .github/FUNDING.yml: shared donate link
 

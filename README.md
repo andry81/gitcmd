@@ -1,4 +1,5 @@
-> **Note** To checkout externals read the details here: https://github.com/andry81/externals
+> [!NOTE]
+> To checkout externals read the details here: https://github.com/andry81/externals
 
 <p align="center">The Git scripts collection for various user tasks.</p>
 
