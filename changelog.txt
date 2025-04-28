@@ -1,3 +1,6 @@
+2025.04.28:
+* changed: global code improvement: `echo.` -> `echo;`, based on "Different `echo?...` variants" : https://github.com/andry81/contools/discussions/22
+
 2025.02.03:
 * changed: README.md: github markdown blockquotes update
 

@@ -11,19 +11,19 @@ setlocal
 
 rem print all remotes
 call :CMD git remote || exit /b 255
-echo.---
+echo;---
 
 rem Pull to update local references and test on unmerged heads in the local.
 for /F "usebackq tokens=* delims="eol^= %%i in (`git remote 2^>nul`) do (
   set "REMOTE=%%i"
   call :CMD git pull "%%REMOTE%%" "*:*"
-  echo.---
-  echo.
+  echo;---
+  echo;
 )
 
 rem print all refs
 call :CMD git show-ref || exit /b 255
-echo.---
+echo;---
 
 rem Remove all refs in all remotes to reset the mirror tracking:
 rem   refs/remotes/REMOTE/BRANCH -> refs/remotes/REMOTE/BRANCH
@@ -36,8 +36,8 @@ for /F "usebackq tokens=* delims="eol^= %%i in (`git remote 2^>nul`) do (
   )
   if defined GIT_PUSH_CMDLINE (
     call :GIT_PUSH_EXEC
-    echo.---
-    echo.
+    echo;---
+    echo;
   )
 )
 
@@ -70,8 +70,8 @@ for /F "usebackq tokens=1,* delims= "eol^= %%i in (`git show-ref 2^>nul`) do (
   set "REF=%%j"
   call :GIT_DELETE_REF
 )
-echo.---
-echo.
+echo;---
+echo;
 
 goto GIT_DELETE_REF_END
 
@@ -91,14 +91,14 @@ rem Pull to update local references and test on unmerged heads in the local.
 for /F "usebackq tokens=* delims="eol^= %%i in (`git remote 2^>nul`) do (
   set "REMOTE=%%i"
   call :CMD git pull "%%REMOTE%%" "*:*"
-  echo.---
-  echo.
+  echo;---
+  echo;
 )
 
 exit /b 0
 
 :CMD
-echo.^>%*
+echo;^>%*
 (
   %*
 )
