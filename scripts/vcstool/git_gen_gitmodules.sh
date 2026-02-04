@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Description:
 #   Script to generate `.gitmodules` file from `vcstool` repositories file.

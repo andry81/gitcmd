@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Description:
 #   Script to deny rewrite in a bare git repository or in a list of git bare

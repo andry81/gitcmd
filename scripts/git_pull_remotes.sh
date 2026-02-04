@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Description:
 #   Script to pull either all or list of remotes with the fast-forward merge only.

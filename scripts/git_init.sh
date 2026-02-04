@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Description:
 #   Script to initialize a git repository and all common properties.
@@ -31,14 +31,24 @@
 #     gl https://gitlab.com/{{REPO_OWNER}}/{{REPO}}.git
 #     gv https://gitverse.ru/sc/{{REPO_OWNER}}/{{REPO}}.git
 #     gf https://gitflic.ru/project/{{REPO_OWNER}}/{{REPO}}.git
-#     sf ssh://{{SSH_GIT_AUTH_USER}}@git.code.sf.net/p/{{REPO_OWNER}}/{{REPO}}
 #     gt https://gitea.com/{{REPO_OWNER}}/{{REPO}}.git
+#     sc https://git.sourcecraft.dev/{{REPO_OWNER}}/{{REPO}}.git
+#     sf ssh://{{SSH_GIT_AUTH_USER}}@git.code.sf.net/p/{{REPO_OWNER}}/{{REPO}}
 #   )
 #
 # If not defined, then these variables automatically sets from the environment:
 #
 #   SSH_GIT_AUTH_USER
 #
+# NOTE:
+#   Several hubs have has limitations to how a specific character can be used.
+#
+#   For example, the double dash character (`--`) converts to a single dash
+#   character (`-`) by these hubs:
+#
+#     * gitflic.ru
+#     * gitlab.com
+#     * git.sourcecraft.dev
 
 # Description:
 

@@ -1,6 +1,6 @@
 #%% version: 1
 
-# CONFIGURATION FILE FORMAT:
+# FORMAT:
 #   [<attributes>] <variable>[:<class_name>]=<value>
 #   [<attributes>] <variable>[:[<param0>][:[<param1>]]]=<value>
 #

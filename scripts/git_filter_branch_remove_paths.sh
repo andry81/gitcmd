@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Usage:
 #   git_filter_branch_remove_paths.sh [<flags>]  // [<path0> [... <pathN>]] // [<cmdline>]
@@ -57,7 +57,8 @@
 #     -p
 #     --prune-empty
 #       Generate replace references to prune the empty commits after they
-#       become empty because of the `git filter-branch ...` command apply.
+#       became empty (postfix form) because of the `git filter-branch ...`
+#       command apply.
 #       NOTE:
 #         This has different behaviour versus the
 #         `git filter-branch --prune-empty ...` as the latter prunes all the
@@ -91,8 +92,10 @@
 #   <path0> [... <pathN>]:
 #     Source tree relative file paths to a file/directory to remove.
 #     CAUTION:
-#       If a path is a module directory path, then the module record won't
-#       be removed from the `.gitmodules` file.
+#       If a path is a module directory path, then by default the module record
+#       won't be removed from the `.gitmodules` file. The same happens for the
+#       `.gitignore` file. You must use respective flags to update additionally
+#       these.
 #
 #   //:
 #     Separator to stop parse path list.
@@ -104,9 +107,10 @@
 #     The rest of command line passed to `git filter-branch` command.
 
 # CAUTION:
-#   The `--prune-empty` flag will remove ALL the empty commits, including
-#   those which were before the rewrite instead of those which become empty
-#   because of the `git filter-branch ...` apply.
+#   The `--prune-empty` flag in the `git filter-branch` command has a prefix
+#   form and does remove ALL the empty commits, including those which were
+#   before the rewrite instead of those which become empty because of the
+#   `git filter-branch ...` apply.
 
 # NOTE:
 #   All `--i*` flags does operate on the Git commit in the index

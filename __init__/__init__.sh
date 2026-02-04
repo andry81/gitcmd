@@ -1,17 +1,9 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Script can be ONLY included by "source" command.
 [[ -n "$BASH" && (-z "$BASH_LINENO" || BASH_LINENO[0] -gt 0) && (-z "$GITCMD_PROJECT_ROOT_INIT0_DIR" || "$GITCMD_PROJECT_ROOT_INIT0_DIR" != "$GITCMD_PROJECT_ROOT") ]] || return 0 || exit 0 # exit to avoid continue if the return can not be called
 
-if [[ -z "$SOURCE_TACKLELIB_BASH_TACKLELIB_SH" || SOURCE_TACKLELIB_BASH_TACKLELIB_SH -eq 0 ]]; then
-  # builtin search
-  for BASH_SOURCE_DIR in "/usr/local/bin" "/usr/bin" "/bin"; do
-    if [[ -f "$BASH_SOURCE_DIR/bash_tacklelib" ]]; then
-      source "$BASH_SOURCE_DIR/bash_tacklelib" || exit $?
-      break
-    fi
-  done
-fi
+(( SOURCE_TACKLELIB_BASH_TACKLELIB_SH )) || source bash_tacklelib || return 255 || exit 255 # exit to avoid continue if the return can not be called
 
 tkl_cast_to_int NEST_LVL
 
@@ -35,12 +27,12 @@ fi
 
 # retarget externals of an external project
 
-[[ -n "$CONTOOLS_PROJECT_EXTERNALS_ROOT" ]] ||      tkl_export_path -a -s CONTOOLS_PROJECT_EXTERNALS_ROOT       "$GITCMD_PROJECT_EXTERNALS_ROOT"
-[[ -n "$SVNCMD_PROJECT_EXTERNALS_ROOT" ]] ||        tkl_export_path -a -s SVNCMD_PROJECT_EXTERNALS_ROOT         "$GITCMD_PROJECT_EXTERNALS_ROOT"
+# [[ -n "$BLABLA_PROJECT_EXTERNALS_ROOT" ]] ||        tkl_export_path -a -s BLABLA_PROJECT_EXTERNALS_ROOT         "$GITCMD_PROJECT_EXTERNALS_ROOT"
+# ...
 
-# config loader must be included before any external project init and using only init variables (declared here and not by the config)
+# config loader must be included before any external project init and has using only init variables (declared here and not by the config)
 
-if [[ -z "$SOURCE_TACKLELIB_TOOLS_LOAD_CONFIG_SH" || SOURCE_TACKLELIB_TOOLS_LOAD_CONFIG_SH -eq 0 ]]; then # check inclusion guard
+if (( ! SOURCE_TACKLELIB_TOOLS_LOAD_CONFIG_SH )); then # check inclusion guard
   tkl_include_or_abort "$GITCMD_PROJECT_EXTERNALS_ROOT/tacklelib/bash/tacklelib/tools/load_config.sh"
 fi
 
@@ -54,6 +46,10 @@ fi
 tkl_load_config_dir --no-load-user-config --expand-all-configs-tkl-vars -- "$GITCMD_PROJECT_INPUT_CONFIG_ROOT" "$GITCMD_PROJECT_OUTPUT_CONFIG_ROOT" || tkl_abort
 
 # init external projects
+
+if [[ -f "$GITCMD_PROJECT_EXTERNALS_ROOT/tacklelib/__init__/__init__.sh" ]]; then
+  tkl_include_or_abort "$GITCMD_PROJECT_EXTERNALS_ROOT/tacklelib/__init__/__init__.sh"
+fi
 
 tkl_include_or_abort "$TACKLELIB_BASH_ROOT/tacklelib/buildlib.sh"
 

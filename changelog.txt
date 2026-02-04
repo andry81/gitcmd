@@ -1,3 +1,11 @@
+2026.02.04:
+* changed: __init__: code improvement and refactor
+* changed: *.sh: switched to portable version of shebang line
+* refactor: scripts: git_filter_branch_remove_paths.sh, git_init.sh: minor refactor
+
+2025.10.03:
+* refactor: scripts/git_init.sh: more hub examples to use
+
 2025.04.28:
 * changed: global code improvement: `echo.` -> `echo;`, based on "Different `echo?...` variants" : https://github.com/andry81/contools/discussions/22
 

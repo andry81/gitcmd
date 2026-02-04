@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Usage:
 #   git_filter_repo_remove_paths.sh <path0> [... <pathN>] // [<cmdline>]
