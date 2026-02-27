@@ -1,3 +1,4 @@
-/.log
-/_out
-/_externals
+/**/.log
+/**/.temp
+/**/_out
+/**/_externals
