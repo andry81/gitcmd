@@ -1,3 +1,6 @@
+2026.03.02:
+* new: scripts/git_cleanup_submodules.sh: script to cleanup submodule cache and config
+
 2026.02.04:
 * changed: __init__: code improvement and refactor
 * changed: *.sh: switched to portable version of shebang line
