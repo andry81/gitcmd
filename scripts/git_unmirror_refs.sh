@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
 
+# USAGE:
+#   git_unmirror_refs.sh
+
 # Description:
 #   Script to unmirror all local refs in all remotes.
-
-# Usage:
-#   git_unmirror_refs.sh
-#
 
 # Script both for execution and inclusion.
 [[ -n "$BASH" ]] || return 0 || exit 0 # exit to avoid continue if the return can not be called

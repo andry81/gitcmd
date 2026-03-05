@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
 
+# USAGE:
+#   git_cleanup_filter_branch.sh
+
 # Description:
 #   Script to cleanup artefacts after using `git filter-branch` command.
-
-# Usage:
-#   git_cleanup_filter_branch.sh
-#
 
 # Script both for execution and inclusion.
 [[ -n "$BASH" ]] || return 0 || exit 0 # exit to avoid continue if the return can not be called

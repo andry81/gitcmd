@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
 
+# USAGE:
+#   git_cleanup_submodules.sh
+
 # Description:
 #   Script to cleanup all submodule cache and config after remove of
 #   `.gitmodules` file.
-
-# Usage:
-#   git_cleanup_submodules.sh
-#
 
 # Script both for execution and inclusion.
 [[ -n "$BASH" ]] || return 0 || exit 0 # exit to avoid continue if the return can not be called
@@ -27,6 +26,8 @@ function evalcall()
 
 function git_cleanup_submodules()
 {
+  local IFS
+
   # remove submodule cache using submodules directories recursively
   call git rm -r --cache "$@"
   echo ---

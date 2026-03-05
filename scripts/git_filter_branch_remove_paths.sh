@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Usage:
+# USAGE:
 #   git_filter_branch_remove_paths.sh [<flags>]  // [<path0> [... <pathN>]] // [<cmdline>]
 #   git_filter_branch_remove_paths.sh [<flags>] [//] <path0> [... <pathN>]  // [<cmdline>]
 
@@ -8,103 +8,103 @@
 #   Script to remove paths from commits in a repository using
 #   `git filter-branch` command.
 
-#   <flags>:
-#     --i0
-#       Use `git update-index --index-info` to update entire index file.
-#       By default.
-#     --i1
-#       Use `git update-index --remove` instead.
-#     --i2
-#       Use `git rm --cached` instead.
-#     -f
-#       Use `git rm -f` or `git update-index --force-remove` respectively
-#       instead. Is not applicable for the `--i0`.
-#     -r
-#       Use `git rm -r` respectively instead. Is not applicable for the `--i0`
-#       and `--i1`.
-#     -m
-#     --remove-submodules
-#       Remove submodule paths using `.gitmodules` file and the skip
-#       filter from `--skip-submodule-*` option.
-#       If all paths is removed, then remove the `.gitmodules` file too.
-#       Has effect if `.gitmodules` is in path list, but the file does remove
-#       only when all module paths is removed.
-#       CAUTION:
-#         The command line path list does remove unconditionally and so does
-#         not affect the paths in the `.gitmodules` leaving them unchanged.
-#         You must use this flag to reflect the changes into the file.
-#     -P
-#     --skip-submodule-path-prefix
-#       Skip submodule remove for path with prefix (no globbing).
-#       Has no effect if `--remove-submodules` flag is not used.
-#       Has no effect if `.gitmodules` is in path list.
-#     -i
-#     --sync-gitignore-submodule-paths
-#       Synchronize `.gitignore` for paths removed from `.gitmodules`.
-#       Has no effect if `.gitignore` is in path list.
-#       CAUTION:
-#         Is supported a very limited lines format in the `.gitignore` file:
-#           * Blank and comment lines does not restore to the previous.
-#           * Leading and trailing white spaces in a line does trim before
-#             check in the index.
-#           * Paths with globbing, backslashes, ranges and exclusion pattern
-#             does pass into `git ls-files` as is to detect indexed paths.
-#         See details: https://git-scm.com/docs/gitignore#_pattern_format
-#       CAUTION:
-#         The command line path list does remove unconditionally and so does
-#         not affect the paths in the `.gitignore` leaving them unchanged.
-#         You must use this flag to reflect the changes into the file.
-#     -p
-#     --prune-empty
-#       Generate replace references to prune the empty commits after they
-#       became empty (postfix form) because of the `git filter-branch ...`
-#       command apply.
-#       NOTE:
-#         This has different behaviour versus the
-#         `git filter-branch --prune-empty ...` as the latter prunes all the
-#         empty commits including those which were empty before the rewrite.
-#       CAUTION:
-#         Does not generate replace references for the empty commits under the
-#         most top reference(s) from the filtered range expression, so won't be
-#         removed those last commits which is pointed by these.
-#         This is by design because the prunning algorithm is based on
-#         `git replace --graft` command and it requires to access a commit
-#         above the commits filtered range to prune (bypass) the empty commit
-#         in the filtered range.
-#         To still remove such commits, you must execute the
-#         `git filter-branch --prune-empty` command with at least the same
-#         (or may be with the modificated one to select the rewrited range)
-#         commits filter range expression manually after the script.
-#     -z
-#     --finalize
-#       Finalizes changes and applies replace references just after the replace
-#       references generation.
-#       Executes `git filter-branch` command to apply replace references in
-#       case of `--prune-empty` flag.
-#       Has no effect if `--prune-empty` is not used.
-#       Has no effect if nothing to finalize.
-#
-#   //:
-#     Separator to stop parse flags.
-#     NOTE:
-#       Is required if the command line path list is empty.
-#
-#   <path0> [... <pathN>]:
-#     Source tree relative file paths to a file/directory to remove.
+# <flags>:
+#   --i0
+#     Use `git update-index --index-info` to update entire index file.
+#     By default.
+#   --i1
+#     Use `git update-index --remove` instead.
+#   --i2
+#     Use `git rm --cached` instead.
+#   -f
+#     Use `git rm -f` or `git update-index --force-remove` respectively
+#     instead. Is not applicable for the `--i0`.
+#   -r
+#     Use `git rm -r` respectively instead. Is not applicable for the `--i0`
+#     and `--i1`.
+#   -m
+#   --remove-submodules
+#     Remove submodule paths using `.gitmodules` file and the skip
+#     filter from `--skip-submodule-*` option.
+#     If all paths is removed, then remove the `.gitmodules` file too.
+#     Has effect if `.gitmodules` is in path list, but the file does remove
+#     only when all module paths is removed.
 #     CAUTION:
-#       If a path is a module directory path, then by default the module record
-#       won't be removed from the `.gitmodules` file. The same happens for the
-#       `.gitignore` file. You must use respective flags to update additionally
-#       these.
-#
-#   //:
-#     Separator to stop parse path list.
+#       The command line path list does remove unconditionally and so does
+#       not affect the paths in the `.gitmodules` leaving them unchanged.
+#       You must use this flag to reflect the changes into the file.
+#   -P
+#   --skip-submodule-path-prefix
+#     Skip submodule remove for path with prefix (no globbing).
+#     Has no effect if `--remove-submodules` flag is not used.
+#     Has no effect if `.gitmodules` is in path list.
+#   -i
+#   --sync-gitignore-submodule-paths
+#     Synchronize `.gitignore` for paths removed from `.gitmodules`.
+#     Has no effect if `.gitignore` is in path list.
+#     CAUTION:
+#       Is supported a very limited lines format in the `.gitignore` file:
+#         * Blank and comment lines does not restore to the previous.
+#         * Leading and trailing white spaces in a line does trim before
+#           check in the index.
+#         * Paths with globbing, backslashes, ranges and exclusion pattern
+#           does pass into `git ls-files` as is to detect indexed paths.
+#       See details: https://git-scm.com/docs/gitignore#_pattern_format
+#     CAUTION:
+#       The command line path list does remove unconditionally and so does
+#       not affect the paths in the `.gitignore` leaving them unchanged.
+#       You must use this flag to reflect the changes into the file.
+#   -p
+#   --prune-empty
+#     Generate replace references to prune the empty commits after they
+#     became empty (postfix form) because of the `git filter-branch ...`
+#     command apply.
 #     NOTE:
-#       The last separator `//` is required to distinguish path list from
-#       `<cmdline>`.
-#
-#   <cmdline>:
-#     The rest of command line passed to `git filter-branch` command.
+#       This has different behaviour versus the
+#       `git filter-branch --prune-empty ...` as the latter prunes all the
+#       empty commits including those which were empty before the rewrite.
+#     CAUTION:
+#       Does not generate replace references for the empty commits under the
+#       most top reference(s) from the filtered range expression, so won't be
+#       removed those last commits which is pointed by these.
+#       This is by design because the prunning algorithm is based on
+#       `git replace --graft` command and it requires to access a commit
+#       above the commits filtered range to prune (bypass) the empty commit
+#       in the filtered range.
+#       To still remove such commits, you must execute the
+#       `git filter-branch --prune-empty` command with at least the same
+#       (or may be with the modificated one to select the rewrited range)
+#       commits filter range expression manually after the script.
+#   -z
+#   --finalize
+#     Finalizes changes and applies replace references just after the replace
+#     references generation.
+#     Executes `git filter-branch` command to apply replace references in
+#     case of `--prune-empty` flag.
+#     Has no effect if `--prune-empty` is not used.
+#     Has no effect if nothing to finalize.
+
+# //:
+#   Separator to stop parse flags.
+#   NOTE:
+#     Is required if the command line path list is empty.
+
+# <path0> [... <pathN>]:
+#   Source tree relative file paths to a file/directory to remove.
+#   CAUTION:
+#     If a path is a module directory path, then by default the module record
+#     won't be removed from the `.gitmodules` file. The same happens for the
+#     `.gitignore` file. You must use respective flags to update additionally
+#     these.
+
+# //:
+#   Separator to stop parse path list.
+#   NOTE:
+#     The last separator `//` is required to distinguish path list from
+#     `<cmdline>`.
+
+# <cmdline>:
+#   The rest of command line passed to `git filter-branch` command.
 
 # CAUTION:
 #   The `--prune-empty` flag in the `git filter-branch` command has a prefix

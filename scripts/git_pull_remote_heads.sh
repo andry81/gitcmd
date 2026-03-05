@@ -1,19 +1,19 @@
 #!/usr/bin/env bash
 
+# USAGE:
+#   git_pull_remotes_heads.sh <remote> [// <fetch-cmd-line>]
+
 # Description:
 #   Script to pull all branches from a remote with the fast-forward merge only.
 
-# Usage:
-#   git_pull_remotes_heads.sh <remote> [// <fetch-cmd-line>]
-#
-#   //:
-#     Separator to stop parse flags or previous command line argument list.
-#
-#   <remote>:
-#     Remote to pull from.
-#
-#   <fetch-cmd-line>:
-#     The rest of command line passed to each `git fetch ...` command.
+# //:
+#   Separator to stop parse flags or previous command line argument list.
+
+# <remote>:
+#   Remote to pull from.
+
+# <fetch-cmd-line>:
+#   The rest of command line passed to each `git fetch ...` command.
 
 # NOTE:
 #   You must use `GIT_SSH` variable to pass the path to plink agent if want to

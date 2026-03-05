@@ -1,24 +1,25 @@
 #!/usr/bin/env bash
 
+# USAGE:
+#   git_init.sh <repo_owner> <repo> [remote:<name0>:<var0>=<value0> [remote:<name1>:<var1>=<value1> [... remote:<nameN>:<varN>=<valueN>]]
+
 # Description:
 #   Script to initialize a git repository and all common properties.
 
-# Usage:
-#   git_init.sh <repo_owner> <repo> [remote:<name0>:<var0>=<value0> [remote:<name1>:<var1>=<value1> [... remote:<nameN>:<varN>=<valueN>]]
+# <repo_owner>:
+#   Common repository owner for all remotes from `GIT_REPO_DEFAULT_REMOTES`.
+
+# <repo>:
+#   Common repository name for all remotes from `GIT_REPO_DEFAULT_REMOTES`.
+
+# <name>:
+#   Repository remote name from `GIT_REPO_DEFAULT_REMOTES`.
 #
-#   <repo_owner>:
-#     Common repository owner for all remotes from `GIT_REPO_DEFAULT_REMOTES`.
-#   <repo>:
-#     Common repository name for all remotes from `GIT_REPO_DEFAULT_REMOTES`.
+#   <var>:
+#     Variable to use for a remote from `GIT_REPO_DEFAULT_REMOTES`.
 #
-#   <name>:
-#     Repository remote name from `GIT_REPO_DEFAULT_REMOTES`.
-#
-#     <var>:
-#       Variable to use for a remote from `GIT_REPO_DEFAULT_REMOTES`.
-#
-#     <value>:
-#       Value to use for a remote from `GIT_REPO_DEFAULT_REMOTES`.
+#   <value>:
+#     Value to use for a remote from `GIT_REPO_DEFAULT_REMOTES`.
 
 # Examples:
 #   >
@@ -49,8 +50,6 @@
 #     * gitflic.ru
 #     * gitlab.com
 #     * git.sourcecraft.dev
-
-# Description:
 
 # Script both for execution and inclusion.
 [[ -n "$BASH" ]] || return 0 || exit 0 # exit to avoid continue if the return can not be called

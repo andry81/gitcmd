@@ -1,27 +1,27 @@
 #!/usr/bin/env bash
 
+# USAGE:
+#   git_pull_remotes.sh <default-remote> [from-remote1 [from-remote2 [...from-remoteN]]] [: branch1 [branch2 [...branchN]]] [// <fetch-cmd-line>]
+
 # Description:
 #   Script to pull either all or list of remotes with the fast-forward merge only.
 
-# Usage:
-#   git_pull_remotes.sh <default-remote> [from-remote1 [from-remote2 [...from-remoteN]]] [: branch1 [branch2 [...branchN]]] [// <fetch-cmd-line>]
-#
-#   //:
-#     Separator to stop parse flags or previous command line argument list.
-#
-#   <default-remote>:
-#     Default remote to pull at first.
-#
-#   <from-remote>:
-#     Remote to pull from.
-#     If not defined, then `git remote` is used instead.
-#
-#   <branch>:
-#     Branch to pull from <from-remote>.
-#     If not defined, then `git branch` is used instead.
-#
-#   <fetch-cmd-line>:
-#     The rest of command line passed to each `git fetch ...` command.
+# //:
+#   Separator to stop parse flags or previous command line argument list.
+
+# <default-remote>:
+#   Default remote to pull at first.
+
+# <from-remote>:
+#   Remote to pull from.
+#   If not defined, then `git remote` is used instead.
+
+# <branch>:
+#   Branch to pull from <from-remote>.
+#   If not defined, then `git branch` is used instead.
+
+# <fetch-cmd-line>:
+#   The rest of command line passed to each `git fetch ...` command.
 
 # NOTE:
 #   You must use `GIT_SSH` variable to pass the path to plink agent if want to

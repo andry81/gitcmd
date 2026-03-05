@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Usage:
+# USAGE:
 #   git_filter_repo_remove_paths.sh <path0> [... <pathN>] // [<cmdline>]
 
 # Description:
@@ -9,17 +9,17 @@
 #   https://github.com/newren/git-filter-repo
 #   https://github.com/newren/git-filter-repo/tree/HEAD/Documentation/git-filter-repo.txt
 
-#   <path0> [... <pathN>]:
-#     Source tree relative file paths to a file/directory to remove.
-#
-#   //:
-#     Separator to stop parse path list.
-#     NOTE:
-#       The last separator `//` is required to distinguish path list from
-#       `<cmdline>`.
-#
-#   <cmdline>:
-#     The rest of command line passed to `git filter-repo` command.
+# <path0> [... <pathN>]:
+#   Source tree relative file paths to a file/directory to remove.
+
+# //:
+#   Separator to stop parse path list.
+#   NOTE:
+#     The last separator `//` is required to distinguish path list from
+#     `<cmdline>`.
+
+# <cmdline>:
+#   The rest of command line passed to `git filter-repo` command.
 
 # CAUTION:
 #   Currently the `git filter-repo` implementation is not stable and may miss

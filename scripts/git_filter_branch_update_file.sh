@@ -1,24 +1,27 @@
 #!/usr/bin/env bash
 
+# USAGE:
+#   git_filter_branch_update_file.sh [<flags>] [//] <abs-path-to-file> <sourcetree-path-to-dir> [<cmd-line>]
+
 # Description:
 #   Script to update (add or replace) a file from commits in a repository
 #   using `git filter-branch` command.
-#
 
-# Usage:
-#   git_filter_branch_update_file.sh [<flags>] [//] <abs-path-to-file> <sourcetree-path-to-dir> [<cmd-line>]
-#
-#   <flags>:
-#     -f
-#       Use `cp -f` instead.
-#   //:
-#     Separator to stop parse flags.
-#   <abs-path-to-file>:
-#     Absolute local file path to copy from.
-#   <sourcetree-path-to-dir>:
-#     Source tree relative file path of a directory to copy to.
-#   <cmd-line>:
-#     The rest of command line passed to `git filter-branch` command.
+# <flags>:
+#   -f
+#     Use `cp -f` instead.
+
+# //:
+#   Separator to stop parse flags.
+
+# <abs-path-to-file>:
+#   Absolute local file path to copy from.
+
+# <sourcetree-path-to-dir>:
+#   Source tree relative file path of a directory to copy to.
+
+# <cmd-line>:
+#   The rest of command line passed to `git filter-branch` command.
 
 # CAUTION:
 #   Path `<abs-path-to-file>` must be outside of the working copy, otherwise
@@ -93,7 +96,6 @@
 # Based on:
 #   https://stackoverflow.com/questions/54199584/how-to-add-a-file-to-a-specific-commit-with-git-filter-branch
 #   https://stackoverflow.com/questions/21353584/git-how-do-i-add-a-file-to-the-first-commit-and-rewrite-history-in-the-process
-#
 
 # Script both for execution and inclusion.
 [[ -n "$BASH" ]] || return 0 || exit 0 # exit to avoid continue if the return can not be called

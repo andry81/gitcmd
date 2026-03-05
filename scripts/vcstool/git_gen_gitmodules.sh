@@ -1,81 +1,80 @@
 #!/usr/bin/env bash
 
+# USAGE:
+#   git_gen_gitmodules.sh [<flags>] [//] [<dir> <input-file-name-pattern> [<output-file-name-prefix>]]
+
 # Description:
 #   Script to generate `.gitmodules` file from `vcstool` repositories file.
 #   See for details:
 #     https://github.com/dirk-thomas/vcstool
 #     https://github.com/aaronplusone/vcstool/tree/feature-sparse-checkouts
 
-# Usage:
-#   git_gen_gitmodules.sh [<flags>] [//] [<dir> <input-file-name-pattern> [<output-file-name-prefix>]]
+# <flags>:
+#   --ignore-type:
+#     Ignore `type` field and generate for all repositories.
 #
-#   <flags>:
-#     --ignore-type:
-#       Ignore `type` field and generate for all repositories.
+#   --default-input-file-name-prefix <default-input-file-name-prefix>:
+#     Default input file name prefix to convert to default output file name
+#     prefix.
+#     If not defined, then `.externals` is used by default.
 #
-#     --default-input-file-name-prefix <default-input-file-name-prefix>:
-#       Default input file name prefix to convert to default output file name
-#       prefix.
-#       If not defined, then `.externals` is used by default.
+#   --exclude-dirs <dirs-list>:
+#     List of directories to exclude from the search, where `<dirs-list>`
+#     is a string evaluatable to the shell array.
+#     If not defined, then `".git" ".log" "_externals" "_out"` is used by
+#     default.
 #
-#     --exclude-dirs <dirs-list>:
-#       List of directories to exclude from the search, where `<dirs-list>`
-#       is a string evaluatable to the shell array.
-#       If not defined, then `".git" ".log" "_externals" "_out"` is used by
-#       default.
+#   -u
+#   --gen-submodule-name-from-url
+#     Generate submodule name from `url` field instead of `repositories` key
+#     values, but use the key value for the `url` field reduction.
 #
-#     -u
-#     --gen-submodule-name-from-url
-#       Generate submodule name from `url` field instead of `repositories` key
-#       values, but use the key value for the `url` field reduction.
+#   --allow-fetch-recursion-on-sparsed-submodules
+#     By default a sparse checkouted submodule has the
+#     `fetchRecurseSubmodules = false` option in the output file.
+#     This option avoids it.
 #
-#     --allow-fetch-recursion-on-sparsed-submodules
-#       By default a sparse checkouted submodule has the
-#       `fetchRecurseSubmodules = false` option in the output file.
-#       This option avoids it.
+#   --allow-update-on-sparsed-submodules
+#     By default a sparse checkouted submodule has the `update = none` option
+#     in the output file.
+#     This option avoids it.
 #
-#     --allow-update-on-sparsed-submodules
-#       By default a sparse checkouted submodule has the `update = none` option
-#       in the output file.
-#       This option avoids it.
+#   -f:
+#     Force overwrite output file.
 #
-#     -f:
-#       Force overwrite output file.
+#   -a:
+#     Append to output file name from `<output-file-name-prefix>` as complete
+#     name (not prefix).
 #
-#     -a:
-#       Append to output file name from `<output-file-name-prefix>` as complete
-#       name (not prefix).
+#   -t:
+#     Append next found files except the first found file (tail files).
+
+# //:
+#   Separator to stop parse flags.
+
+# <dir>
+#   Directory to start search from using `find` tool.
+
+# <input-file-name-pattern>:
+#   Path pattern for the `find` tool to find `vcstool` repository file(s).
+#   If not defined, then `<default-input-file-name-prefix>*` is used as by
+#   default from the `<dir>` or current directory.
+#   `<default-input-file-name-prefix>` is used as a trim.
+
+# <output-file-name-prefix>:
+#   Output file name prefix.
+#   If not defined, then `.gitmodules` is used.
+
+# If input file name is equal to `<default-input-file-name-prefix>`, then
+# the `<output-file-name-prefix>` is used as the output complete file name.
 #
-#     -t:
-#       Append next found files except the first found file (tail files).
+# If input file name begins by the `<default-input-file-name-prefix>`,
+# then the `<output-file-name-prefix>-<input-file-name-suffix>` is used,
+# where the `<input-file-name-suffix>` is the input file name without
+# `<default-input-file-name-prefix>` prefix.
 #
-#   //:
-#     Separator to stop parse flags.
-#
-#   <dir>
-#     Directory to start search from using `find` tool.
-#
-#   <input-file-name-pattern>:
-#     Path pattern for the `find` tool to find `vcstool` repository file(s).
-#     If not defined, then `<default-input-file-name-prefix>*` is used as by
-#     default from the `<dir>` or current directory.
-#     `<default-input-file-name-prefix>` is used as a trim.
-#
-#   <output-file-name-prefix>:
-#     Output file name prefix.
-#     If not defined, then `.gitmodules` is used.
-#
-#   If input file name is equal to `<default-input-file-name-prefix>`, then
-#   the `<output-file-name-prefix>` is used as the output complete file name.
-#
-#   If input file name begins by the `<default-input-file-name-prefix>`,
-#   then the `<output-file-name-prefix>-<input-file-name-suffix>` is used,
-#   where the `<input-file-name-suffix>` is the input file name without
-#   `<default-input-file-name-prefix>` prefix.
-#
-#   In all other cases the output file name is
-#   `<output-file-name-prefix>-<input-file-name>` is used.
-#
+# In all other cases the output file name is
+# `<output-file-name-prefix>-<input-file-name>` is used.
 
 # Examples:
 #   >

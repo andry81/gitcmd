@@ -1,16 +1,15 @@
 #!/usr/bin/env bash
 
+# USAGE:
+#   git_bare_config_deny_rewrite.sh <dir> [<dir-name-pattern>]
+
 # Description:
 #   Script to deny rewrite in a bare git repository or in a list of git bare
 #   repositories searched by the `find` pattern.
 
-# Usage:
-#   git_bare_config_deny_rewrite.sh <dir> [<dir-name-pattern>]
-
 # Examples:
 #   >
 #   git_bare_config_deny_rewrite.sh /home/git "*.git"
-#
 
 # Script both for execution and inclusion.
 [[ -n "$BASH" ]] || return 0 || exit 0 # exit to avoid continue if the return can not be called

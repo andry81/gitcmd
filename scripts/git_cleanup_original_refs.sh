@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
 
+# USAGE:
+#   git_cleanup_original_refs.sh
+
 # Description:
 #   Script to cleanup all `refs/original/refs` references.
-
-# Usage:
-#   git_cleanup_original_refs.sh
-#
 
 # Script both for execution and inclusion.
 [[ -n "$BASH" ]] || return 0 || exit 0 # exit to avoid continue if the return can not be called

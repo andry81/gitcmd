@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# USAGE:
+#   git_filter_repo_shrink_commit_msg_first_line_returns.sh [<flags>] [//] [<cmd-line>]
+
 # Description:
 #   Script to shrink first line returns (remove all line returns before the
 #   first line and shrink repeating line returns after the first line) from all
@@ -7,22 +10,20 @@
 #   https://github.com/newren/git-filter-repo
 #   https://github.com/newren/git-filter-repo/tree/HEAD/Documentation/git-filter-repo.txt
 
-# Usage:
-#   git_filter_repo_shrink_commit_msg_first_line_returns.sh [<flags>] [//] [<cmd-line>]
-#
-#   <flags>:
-#     -r1
-#       Leaves one more line return after the first line (2 line returns).
-#   //:
-#     Separator to stop parse flags.
-#   <cmd-line>:
-#     The rest of command line passed to `git filter-repo` command.
+# <flags>:
+#   -r1
+#     Leaves one more line return after the first line (2 line returns).
+
+# //:
+#   Separator to stop parse flags.
+
+# <cmd-line>:
+#   The rest of command line passed to `git filter-repo` command.
 
 # Examples:
 #   >
 #   cd myrepo/path
 #   git_filter_repo_shrink_commit_msg_first_line_returns.sh // --force
-#
 
 # NOTE:
 #   The implementation implies the `--partial` flag to avoid remove of the

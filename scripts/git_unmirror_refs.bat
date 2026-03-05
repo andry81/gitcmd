@@ -1,11 +1,11 @@
-@echo off
+@echo off & goto DOC_END
+
+rem USAGE:
+rem   git_unmirror_refs.bat
 
 rem Description:
 rem   Script to unmirror all local refs in all remotes.
-
-rem Usage:
-rem   git_unmirror_refs.bat
-rem
+:DOC_END
 
 setlocal
 

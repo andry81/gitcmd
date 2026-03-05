@@ -1,19 +1,6 @@
 #!/usr/bin/env bash
 
-# Description:
-#   Script to replace user emails and names in commits using
-#   `git filter-branch` command.
-#
-#   The user email has priority over the user name, so if not matched, then
-#   user name search is skipped. To avoid that you have to call function below
-#   twice using `*` as an old value.
-
-# Format:
-#   git_filter_branch_user.sh author:committer email@to newname email@from oldname [email2@from oldname2 ...]
-#   git_flb_u a:c email@to newname email@from oldname [email2@from oldname2 ...]
-#
-
-# Usage:
+# USAGE:
 #   For single user email and name:
 #
 #   >
@@ -27,7 +14,18 @@
 #   git filter-branch --env-filter \
 #     "source \"$PROJECTS_ROOT\"'/andry81/gitcmd/gitcmd/git_filter_branch_user.sh; \
 #     git_fb_u a:c '<USER_NEW_EMAIL>' '<USER_NEW_NAME>' '<USER_OLD_EMAIL_1>' '<USER_OLD_NAME_1>' '<USER_OLD_EMAIL_2>' '<USER_OLD_NAME_2>'" -- --all
+
+# Description:
+#   Script to replace user emails and names in commits using
+#   `git filter-branch` command.
 #
+#   The user email has priority over the user name, so if not matched, then
+#   user name search is skipped. To avoid that you have to call function below
+#   twice using `*` as an old value.
+
+# Format:
+#   git_filter_branch_user.sh author:committer email@to newname email@from oldname [email2@from oldname2 ...]
+#   git_flb_u a:c email@to newname email@from oldname [email2@from oldname2 ...]
 
 # NOTE:
 #   You must use `git_cleanup_filter_branch.sh` script to complete the

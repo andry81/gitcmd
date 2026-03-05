@@ -1,63 +1,62 @@
 #!/usr/bin/env bash
 
+# USAGE:
+#   git_filter_branch_update_file_text.sh [<flags>] [//] <dir> <file-name-pattern> <text-to-match> <text-to-replace> [<cmd-line>]
+
 # Description:
 #   Script to update a file text from commits in a repository
 #   using `git filter-branch` command.
 #   For search and replace functionality the `find` and `sed` utilities is
 #   used.
-#
 
-# Usage:
-#   git_filter_branch_update_file_text.sh [<flags>] [//] <dir> <file-name-pattern> <text-to-match> <text-to-replace> [<cmd-line>]
+# <flags>:
+#   -E (POSIX)
+#   -r
+#     Use sed with extended regular expression.
 #
-#   <flags>:
-#     -E (POSIX)
-#     -r
-#       Use sed with extended regular expression.
+#   --esc-sh-chars
+#     Escape shell control characters:
+#       ` -> \`
+#       $ -> \$
 #
-#     --esc-sh-chars
-#       Escape shell control characters:
-#         ` -> \`
-#         $ -> \$
+#   --sed-expr-prefix <sed-expr-prefix>
+#     Prefix of the while sed expression in the format:
+#       <PREFIX>; <BEGIN>|<text-to-match>|<text-to-replace>|<END>
+#     By default the whole file does load into pattern space using this
+#     prefix:
+#       `H;1h;\$!d;x`
 #
-#     --sed-expr-prefix <sed-expr-prefix>
-#       Prefix of the while sed expression in the format:
-#         <PREFIX>; <BEGIN>|<text-to-match>|<text-to-replace>|<END>
-#       By default the whole file does load into pattern space using this
-#       prefix:
-#         `H;1h;\$!d;x`
+#   --sed-expr-begin <sed-expr-begin>
+#     Begin of the sed expression in the format:
+#       <PREFIX>; <BEGIN>|<text-to-match>|<text-to-replace>|<END>
+#     By default the substitution is used:
+#       `s`
 #
-#     --sed-expr-begin <sed-expr-begin>
-#       Begin of the sed expression in the format:
-#         <PREFIX>; <BEGIN>|<text-to-match>|<text-to-replace>|<END>
-#       By default the substitution is used:
-#         `s`
-#
-#     --sed-expr-end <sed-expr-end>
-#       Begin of the sed expression in the format:
-#         <PREFIX>; <BEGIN>|<text-to-match>|<text-to-replace>|<END>
-#       By default the global match is used:
-#         `g`
-#
-#   //:
-#     Separator to stop parse flags.
-#
-#   <dir>:
-#     Source tree relative directory, where to search the <file-name-pattern>.
-#     Passes to `find` utility.
-#
-#   <file-name-pattern>:
-#     Source tree relative file pattern to a file to update.
-#     Passes to `find` utility.
-#
-#   <text-to-match>:
-#     The `sed` text to match.
-#
-#   <text-to-replace>:
-#     The `sed` text to replace.
-#
-#   <cmd-line>:
-#     The rest of command line passed to `git filter-branch` command.
+#   --sed-expr-end <sed-expr-end>
+#     Begin of the sed expression in the format:
+#       <PREFIX>; <BEGIN>|<text-to-match>|<text-to-replace>|<END>
+#     By default the global match is used:
+#       `g`
+
+# //:
+#   Separator to stop parse flags.
+
+# <dir>:
+#   Source tree relative directory, where to search the <file-name-pattern>.
+#   Passes to `find` utility.
+
+# <file-name-pattern>:
+#   Source tree relative file pattern to a file to update.
+#   Passes to `find` utility.
+
+# <text-to-match>:
+#   The `sed` text to match.
+
+# <text-to-replace>:
+#   The `sed` text to replace.
+
+# <cmd-line>:
+#   The rest of command line passed to `git filter-branch` command.
 
 # Examples:
 #   # To update all commits in all heads to update first commit(s) in all
@@ -125,7 +124,6 @@
 #
 #     `replace-text-limited-to-certain-files: TypeError: %d format: a real number is required, not bytes` :
 #     https://github.com/newren/git-filter-repo/issues/468
-#
 
 # NOTE:
 #   See all other details about rev-list caveats in the

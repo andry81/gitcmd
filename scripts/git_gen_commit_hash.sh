@@ -1,24 +1,28 @@
 #!/usr/bin/env bash
 
+# USAGE:
+#   git_gen_commit_hash.sh [<flags>] [//] <object> [<hash-cmd> [<hash-cmd-line>]]
+
 # Description:
 #   Script to generate a commit hash from hash or reference.
 #   Useful to recheck a commit consistency.
 
-# Usage:
-#   git_gen_commit_hash.sh [<flags>] [//] <object> [<hash-cmd> [<hash-cmd-line>]]
-#
-#   <flags>:
-#     -p
-#       Include print parents for each commit.
-#   //:
-#     Separator to stop parse flags.
-#   <object>:
-#     A commit hash or reference.
-#   <hash-cmd>:
-#     The hash command to execute for stdin pipe.
-#     If not defined, then `sha1sum` is used.
-#   <hash-cmd-line>:
-#     The hash command line for `<hash-cmd>` command.
+# <flags>:
+#   -p
+#     Include print parents for each commit.
+
+# //:
+#   Separator to stop parse flags.
+
+# <object>:
+#   A commit hash or reference.
+
+# <hash-cmd>:
+#   The hash command to execute for stdin pipe.
+#   If not defined, then `sha1sum` is used.
+
+# <hash-cmd-line>:
+#   The hash command line for `<hash-cmd>` command.
 
 # Examples:
 #   >

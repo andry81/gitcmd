@@ -1,32 +1,32 @@
 #!/usr/bin/env bash
 
+# USAGE:
+#   git_sync_remotes.sh [<flags>] [//] <from-remote> [to-remote1 [to-remote2 [...to-remoteN]]] [: branch1 [branch2 [...branchN]]] [// <push-cmd-line>]
+
 # Description:
 #   Script to synchronize one remote with other remotes using either all or list of remotes.
 #   Before the push all branches does the current branch pull with the fast-forward merge only.
 
-# Usage:
-#   git_sync_remotes.sh [<flags>] [//] <from-remote> [to-remote1 [to-remote2 [...to-remoteN]]] [: branch1 [branch2 [...branchN]]] [// <push-cmd-line>]
-#
-#   <flags>:
-#     --current-branch:
-#       Sync a current branch only.
-#
-#   //:
-#     Separator to stop parse flags or previous command line argument list.
-#
-#   <from-remote>:
-#     Remote to pull from.
-#
-#   <to-remote>:
-#     Remote to push into.
-#     If not defined, then `git remote` is used instead.
-#
-#   <branch>:
-#     Branch to pull from <from-remote> and push to all <to-remote>.
-#     If not defined, then `git branch` is used instead.
-#
-#   <push-cmd-line>:
-#     The rest of command line passed to each `git push ...` command.
+# <flags>:
+#   --current-branch:
+#     Sync a current branch only.
+
+# //:
+#   Separator to stop parse flags or previous command line argument list.
+
+# <from-remote>:
+#   Remote to pull from.
+
+# <to-remote>:
+#   Remote to push into.
+#   If not defined, then `git remote` is used instead.
+
+# <branch>:
+#   Branch to pull from <from-remote> and push to all <to-remote>.
+#   If not defined, then `git branch` is used instead.
+
+# <push-cmd-line>:
+#   The rest of command line passed to each `git push ...` command.
 
 # NOTE:
 #   You must use `GIT_SSH` variable to pass the path to plink agent if want to

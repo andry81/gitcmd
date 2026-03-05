@@ -1,34 +1,34 @@
 #!/usr/bin/env bash
 
+# USAGE:
+#   git_filter_repo_replace_commit_msg.sh [flags] [//] <from-str> <to-str> [<cmd-line>]
+
 # Description:
 #   Script to replace commit message from commits in a repository using
 #   `git filter-repo` command:
 #   https://github.com/newren/git-filter-repo
 #   https://github.com/newren/git-filter-repo/tree/HEAD/Documentation/git-filter-repo.txt
 
-# Usage:
-#   git_filter_repo_replace_commit_msg.sh [flags] [//] <from-str> <to-str> [<cmd-line>]
+# <flags>:
+#   -use-re-sub
+#     Use `re.sub` instead of `msg.replace` as by default.
 #
-#   <flags>:
-#     -use-re-sub
-#       Use `re.sub` instead of `msg.replace` as by default.
-#
-#     -re-sub-flags <re-sub-flags-python-expr>
-#       Raw python expression string for `re.sub` flags parameter.
-#       Has effect if `-use-re-sub` is used.
-#       Ex: `re.DOTALL | ...`
-#
-#   //:
-#     Separator to stop parse flags.
-#
-#   <from-str>
-#     String to replace from.
-#
-#   <to-str>
-#     String to replace to.
-#
-#   <cmd-line>:
-#     The rest of command line passed to `git filter-repo` command.
+#   -re-sub-flags <re-sub-flags-python-expr>
+#     Raw python expression string for `re.sub` flags parameter.
+#     Has effect if `-use-re-sub` is used.
+#     Ex: `re.DOTALL | ...`
+
+# //:
+#   Separator to stop parse flags.
+
+# <from-str>
+#   String to replace from.
+
+# <to-str>
+#   String to replace to.
+
+# <cmd-line>:
+#   The rest of command line passed to `git filter-repo` command.
 
 # Examples:
 #   # Removes `Update README.md` line from all commits.

@@ -1,13 +1,12 @@
 #!/usr/bin/env bash
 
+# USAGE:
+#   git_cleanup_subgit_svn_import.sh
+
 # Description:
 #   Script to complete the last operation and cleanup artefacts after using
 #   `subgit import ...` command:
 #   https://subgit.com/documentation/howto.html#import
-
-# Usage:
-#   git_cleanup_subgit_svn_import.sh
-#
 
 # Script both for execution and inclusion.
 [[ -n "$BASH" ]] || return 0 || exit 0 # exit to avoid continue if the return can not be called
