@@ -1,3 +1,6 @@
+2026.06.10:
+* changed: scripts: vcstool/git_gen_gitmodules.sh, git_status.sh: `--exclude-dirs` option improvement, read the `DEFAULT_EXCLUDE_DIRS` environment variable if the option is not defined
+
 2026.05.12:
 * refactor: scripts/*.sh: minor refactor
 

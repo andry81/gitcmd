@@ -16,9 +16,24 @@
 #     List of directories to exclude from the search, where `<dirs-list>`
 #     is a string evaluatable to the shell array.
 #
-#     If not defined, then this list is used as `DEFAULT_EXCLUDE_DIRS`
-#     variable:
-#       `".git" ".log" ".temp" "_externals" "_out" "*.backup" "*.bak"`
+#     If not defined, then the `DEFAULT_EXCLUDE_DIRS` global variable is
+#     used.
+#     If the global variable is not defined:
+#
+#       `"~*" ".git" ".svn" ".hg" ".log" ".temp" "_ext" "_externals" "ext" "_out" "out" "Output" "*.backup" "*.bak" "*.old" ".vs" "__pycache__"`
+#
+#     CAUTION:
+#       In case of the parameter you have to quote or escape only the Unix file
+#       globbing characters and a Unix shell special control characters:
+#
+#         `*`, `?`, `<`, `>`, `\`, `|`, `&`, `~`, `$`, `!`, `"`, `'`, ```, ...
+#
+#       In case of the `DEFAULT_EXCLUDE_DIRS` variable you must quote or
+#       escape both the Windows AND the Unix file globbing characters
+#       including a Unix shell special control characters (depends on what
+#       subsystem or Shell is used):
+#
+#         `*`, `?`, `<`, `>`, `^`, `\`, `|`, `&`, `~`, `$`, `!`, `"`, `'`, ```, ...
 
 # //:
 #   Separator to stop parse flags.
@@ -48,7 +63,7 @@
 #   git_status.sh /home/git "*.git"
 #
 #   >
-#   git_status.sh --exclude-dirs '$DEFAULT_EXCLUDE_DIRS "*.suffix"'
+#   git_status.sh --exclude-dirs '$MY_EXCLUDE_DIRS "*.suffix"'
 
 # Script both for execution and inclusion.
 [[ -n "$BASH" ]] || return 0 || exit 0 # exit to avoid continue if the return can not be called
@@ -171,10 +186,12 @@ function git_status()
     name_pttn=.git
   fi
 
-  local DEFAULT_EXCLUDE_DIRS='".git" ".log" ".temp" "_externals" "_out" "*.backup" "*.bak"'
+  if [[ -z "${DEFAULT_EXCLUDE_DIRS+x}" ]]; then
+    local DEFAULT_EXCLUDE_DIRS='"~*" ".git" ".svn" ".hg" ".log" ".temp" "_ext" "_externals" "ext" "_out" "out" "Output" "*.backup" "*.bak" "*.old" ".vs" "__pycache__"'
+  fi
 
   if [[ -z "$exclude_dirs" ]]; then
-    exclude_dirs='$DEFAULT_EXCLUDE_DIRS'
+    exclude_dirs="$DEFAULT_EXCLUDE_DIRS"
   fi
 
   if (( ! ${#args[@]} )); then
@@ -187,7 +204,11 @@ function git_status()
   dir="${dir%/.git}"
 
   local exclude_dirs_arr
-  eval exclude_dirs_arr=($exclude_dirs)
+  eval exclude_dirs_arr=($exclude_dirs) || {
+    echo "$0: error: invalid parameter.
+$0: info: exclude_dirs: \`$exclude_dirs\`" >&2
+    return 255
+  }
 
   # build exclude dirs
   local find_bare_flags

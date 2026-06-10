@@ -22,9 +22,24 @@
 #     List of directories to exclude from the search, where `<dirs-list>`
 #     is a string evaluatable to the shell array.
 #
-#     If not defined, then this list is used as `DEFAULT_EXCLUDE_DIRS`
-#     variable:
-#       `".git" ".log" ".temp" "_externals" "_out" "*.backup" "*.bak"`
+#     If not defined, then the `DEFAULT_EXCLUDE_DIRS` global variable is
+#     used.
+#     If the global variable is not defined:
+#
+#       `"~*" ".git" ".svn" ".hg" ".log" ".temp" "_ext" "_externals" "ext" "_out" "out" "Output" "*.backup" "*.bak" "*.old" ".vs" "__pycache__"`
+#
+#     CAUTION:
+#       In case of the parameter you have to quote or escape only the Unix file
+#       globbing characters and a Unix shell special control characters:
+#
+#         `*`, `?`, `<`, `>`, `\`, `|`, `&`, `~`, `$`, `!`, `"`, `'`, ```, ...
+#
+#       In case of the `DEFAULT_EXCLUDE_DIRS` variable you must quote or
+#       escape both the Windows AND the Unix file globbing characters
+#       including a Unix shell special control characters (depends on what
+#       subsystem or Shell is used):
+#
+#         `*`, `?`, `<`, `>`, `^`, `\`, `|`, `&`, `~`, `$`, `!`, `"`, `'`, ```, ...
 #
 #   -u
 #   --gen-submodule-name-from-url
@@ -117,7 +132,7 @@
 #
 #   >
 #   cd myrepo/path
-#   git_gen_gitmodules.sh --exclude-dirs '$DEFAULT_EXCLUDE_DIRS "*.suffix"' . '.repos*'
+#   git_gen_gitmodules.sh --exclude-dirs '$MY_EXCLUDE_DIRS "*.suffix"' . '.repos*'
 #
 
 # Script both for execution and inclusion.
@@ -311,10 +326,12 @@ function git_gen_gitmodules()
     default_input_file_name_prefix='.externals'
   fi
 
-  local DEFAULT_EXCLUDE_DIRS='".git" ".log" ".temp" "_externals" "_out" "*.backup" "*.bak"'
+  if [[ -z "${DEFAULT_EXCLUDE_DIRS+x}" ]]; then
+    local DEFAULT_EXCLUDE_DIRS='"~*" ".git" ".svn" ".hg" ".log" ".temp" "_ext" "_externals" "ext" "_out" "out" "Output" "*.backup" "*.bak" "*.old" ".vs" "__pycache__"'
+  fi
 
   if [[ -z "$exclude_dirs" ]]; then
-    exclude_dirs='$DEFAULT_EXCLUDE_DIRS'
+    exclude_dirs="$DEFAULT_EXCLUDE_DIRS"
   fi
 
   local dir="${1:-.}"
@@ -322,7 +339,11 @@ function git_gen_gitmodules()
   local output_file_name_prefix="${3:-".gitmodules"}"
 
   local exclude_dirs_arr
-  eval exclude_dirs_arr=($exclude_dirs)
+  eval exclude_dirs_arr=($exclude_dirs) || {
+    echo "$0: error: invalid parameter.
+$0: info: exclude_dirs: \`$exclude_dirs\`" >&2
+    return 255
+  }
 
   yq_init || return $?
 
