@@ -1,3 +1,8 @@
+2026.07.10:
+* fixed: scripts/git_status.sh: verbose output
+* new: scripts/git_status.sh: `--no-print-empty` flag to skip print of empty output
+* new: scripts/git_status.sh: print stashes by default and `--no-stashes` flag to skip print stashes
+
 2026.06.10:
 * changed: scripts: vcstool/git_gen_gitmodules.sh, git_status.sh: `--exclude-dirs` option improvement, read the `DEFAULT_EXCLUDE_DIRS` environment variable if the option is not defined
 

@@ -12,6 +12,18 @@
 #   -v
 #     Verbose mode.
 #
+#   -n
+#   --no-print-empty
+#     Don't print empty status or stashes.
+#
+#     NOTE:
+#       The print only a not empty output results in the output buffering,
+#       which means the result won't be printed until a command exit. So this
+#       implies disable of the piping.
+#
+#   --no-stashes
+#     Don't print stashes.
+#
 #   --exclude-dirs <dirs-list>
 #     List of directories to exclude from the search, where `<dirs-list>`
 #     is a string evaluatable to the shell array.
@@ -68,11 +80,126 @@
 # Script both for execution and inclusion.
 [[ -n "$BASH" ]] || return 0 || exit 0 # exit to avoid continue if the return can not be called
 
+function debug_echo()
+{
+  local last_error=$?
+  local IFS=$' \t'
+
+  echo "$@"
+
+  return $last_error
+}
+
 function call()
 {
   local IFS=$' \t'
   echo ">$*"
   "$@"
+}
+
+# call with buffering
+function call_buf()
+{
+  local IFS=$' \t'
+  local buf
+  local last_error
+
+  # prevent execution in a subshell
+  case "$1" in
+    pushd | popd)
+      "$@" > /dev/null
+      last_error=$?
+      #IFS=$'\r\n'
+      buf="${DIRSTACK[0]} ${DIRSTACK[1]}"
+      ;;
+    *)
+      buf=$("$@")
+      last_error=$?
+      ;;
+  esac
+
+  # if has not line return characters
+  if [[ "$buf" =~ [^\r\n]+ ]]; then
+    IFS=$' \t' echo ">$*"
+    echo "$buf"
+    last_error=0
+  else
+    last_error=1
+  fi
+
+  return $last_error
+}
+
+# exec with buffering
+function exec_buf()
+{
+  local IFS=$' \t'
+  local buf
+  local last_error
+
+  # prevent execution in a subshell
+  case "$1" in
+    pushd | popd)
+      "$@" > /dev/null
+      last_error=$?
+      #IFS=$'\r\n'
+      buf="${DIRSTACK[0]} ${DIRSTACK[1]}"
+      ;;
+    *)
+      buf=$("$@")
+      last_error=$?
+      ;;
+  esac
+
+  # if not empty
+  if [[ -n "$buf" ]]; then
+    echo "$buf"
+  fi
+
+  return $last_error
+}
+
+# call with accumulated buffering
+function call_accum_buf()
+{
+  local IFS=$' \t'
+  call_buf "$@" >> "$accum_buf_file"
+}
+
+# exec with accumulated buffering
+function exec_accum_buf()
+{
+  local IFS=$' \t'
+  exec_buf "$@" >> "$accum_buf_file"
+}
+
+function call_auto_buf()
+{
+  if (( is_buf )); then
+    call_accum_buf "$@"
+  else
+    call "$@"
+  fi
+}
+
+function exec_auto_buf()
+{
+  if (( is_buf )); then
+    exec_accum_buf "$@"
+  else
+    "$@"
+  fi
+}
+
+function accum_buf_status()
+{
+  local last_error=$?
+
+  if (( is_buf )); then
+    if (( ! last_error )); then
+      (( has_accum_buf |= 1 ))
+    fi
+  fi
 }
 
 # Based on:
@@ -120,6 +247,8 @@ function git_status()
   local flag="$1"
 
   local flag_v=0
+  local no_print_empty=0
+  local no_stashes=0
   local exclude_dirs
 
   local skip_flag
@@ -129,7 +258,13 @@ function git_status()
     skip_flag=0
 
     # long flags
-    if [[ "$flag" == '-exclude-dirs' ]]; then
+    if [[ "$flag" == '-no-print-empty' ]]; then
+      no_print_empty=1
+      skip_flag=1
+    elif [[ "$flag" == '-no-stashes' ]]; then
+      no_stashes=1
+      skip_flag=1
+    elif [[ "$flag" == '-exclude-dirs' ]]; then
       exclude_dirs="$2"
       skip_flag=1
       shift
@@ -141,8 +276,10 @@ function git_status()
     # short flags
     if (( ! skip_flag )); then
       while [[ -n "$flag" ]]; do
-        if [[ "${flag:0:1}" == 'v' ]]; then
-          flag_v=0
+        if [[ "${flag:0:1}" == 'n' ]]; then
+          no_print_empty=1
+        elif [[ "${flag:0:1}" == 'v' ]]; then
+          flag_v=1
         else
           echo "$0: error: invalid flag: \`${flag:0:1}\`" >&2
           return 255
@@ -225,6 +362,19 @@ $0: info: exclude_dirs: \`$exclude_dirs\`" >&2
     find_bare_flags="$find_bare_flags -not \\( -path \"${exclude_dirs_arr[i]}\" -prune \\)"
   done
 
+  local is_buf=0
+
+  if (( no_print_empty )); then
+    is_buf=1
+  fi
+
+  if (( is_buf )); then
+    local has_accum_buf
+    local accum_buf_file="$(mktemp /tmp/accum_buf.XXXXXX)"
+
+    trap 'rm "$accum_buf_file"; trap - RETURN' RETURN
+  fi
+
   if [[ -n "$name_pttn" ]]; then
     detect_find
 
@@ -234,36 +384,74 @@ $0: info: exclude_dirs: \`$exclude_dirs\`" >&2
     IFS=$'\r\n'; for git_path in `eval \"\$SHELL_FIND\" \"\$dir\"$find_bare_flags -iname \"\$name_pttn\" -type d`; do # IFS - with trim trailing line feeds
       git_path="${git_path%/.git}"
 
+      if (( is_buf )); then
+        has_accum_buf=0
+        : > "$accum_buf_file" # trim the buffer
+      fi
+
       if (( flag_v )); then
-        call pushd "$git_path" && {
-          call git status "${args[@]}"
-          call popd
+        call_auto_buf pushd "$git_path" && {
+          call_auto_buf git -c color.status=always status "${args[@]}"
+          accum_buf_status
+          if (( ! no_stashes )); then
+            call_auto_buf git stash list
+            accum_buf_status
+          fi
+          call_auto_buf popd
         }
       else
-        realpath "$git_path"
+        exec_auto_buf realpath "$git_path"
         pushd "$git_path" > /dev/null && {
-          call git status "${args[@]}"
+          call_auto_buf git -c color.status=always status "${args[@]}"
+          accum_buf_status
+          if (( ! no_stashes )); then
+            call_auto_buf git stash list
+            accum_buf_status
+          fi
           popd > /dev/null
         }
       fi
-      echo ---
+      exec_auto_buf echo ---
+
+      if (( has_accum_buf )); then
+        cat "$accum_buf_file"
+      fi
     done
   else
     git_path="${git_path%/.git}"
 
+    if (( is_buf )); then
+      has_accum_buf=0
+      : > "$accum_buf_file" # trim the buffer
+    fi
+
     if (( flag_v )); then
-      call pushd "$dir" && {
-        call git status "${args[@]}"
-        call popd
+      call_auto_buf pushd "$dir" && {
+        call_auto_buf git -c color.status=always status "${args[@]}"
+        accum_buf_status
+        if (( ! no_stashes )); then
+          call_auto_buf git stash list
+          accum_buf_status
+        fi
+        call_auto_buf popd
       }
     else
-      realpath "$dir"
+      exec_auto_buf realpath "$dir"
       pushd "$dir" > /dev/null && {
-        call git status "${args[@]}"
+        call_auto_buf git -c color.status=always status "${args[@]}"
+        accum_buf_status
+        if (( ! no_stashes )); then
+          call_auto_buf git stash list
+          accum_buf_status
+        fi
         popd > /dev/null
       }
     fi
-    echo ---
+    exec_auto_buf echo ---
+
+    if (( has_accum_buf )); then
+      cat "$accum_buf_file"
+    fi
   fi
 
   return 0
