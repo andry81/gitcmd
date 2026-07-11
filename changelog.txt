@@ -1,3 +1,13 @@
+2026.07.11:
+* fixed: scripts/git_status.sh: interactive output now is disable by default
+* new: scripts/git_status.sh: print unmerged conflicts by default and `--no-unmerged-conflicts` flag to skip it
+* new: scripts/git_status.sh: print diff checks by default and `--no-diff-checks` flag to skip it
+* new: scripts/git_status.sh: `--no-conflicts` and `--no-checks` flags to skip all conflicts and checks
+* new: scripts/git_status.sh: always print in colors and `--no-colors` flag to disable it
+* new: scripts/git_status.sh: `--status-only` flag to use only the `git status` command
+* changed: scripts/git_status.sh: code reduction
+* changed: scripts/git_status.sh: use non paged mode by default
+
 2026.07.10:
 * fixed: scripts/git_status.sh: verbose output
 * new: scripts/git_status.sh: `--no-print-empty` flag to skip print of empty output

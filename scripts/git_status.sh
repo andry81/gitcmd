@@ -14,15 +14,42 @@
 #
 #   -n
 #   --no-print-empty
-#     Don't print empty status or stashes.
+#     Don't print empty output or with only empty lines (only line returns).
 #
 #     NOTE:
 #       The print only a not empty output results in the output buffering,
 #       which means the result won't be printed until a command exit. So this
 #       implies disable of the piping.
 #
+#   -S
 #   --no-stashes
 #     Don't print stashes.
+#
+#   --no-unmerged-conflicts
+#     Don't print unmerged conflicts (`git diff --diff-filter=U ...`).
+#     Details: https://stackoverflow.com/questions/3065650/whats-the-simplest-way-to-list-conflicted-files-in-git#
+#
+#   --no-diff-checks
+#     Don't print diff checks (`git diff --check ...`).
+#
+#   -L
+#   --no-conflicts
+#     Excludes all conflicts.
+#     Implies `--no-unmerged-conflicts`.
+#
+#   -N
+#   --no-checks
+#     Excludes all checks.
+#     Implies `--no-diff-checks`.
+#
+#   -l
+#   --no-colors
+#     Print without colors.
+#
+#   -s
+#   --status-only
+#     Print status only.
+#     Implies `--no-stashes`, `--no-conflicts`, `--no-checks` flags.
 #
 #   --exclude-dirs <dirs-list>
 #     List of directories to exclude from the search, where `<dirs-list>`
@@ -76,6 +103,10 @@
 #
 #   >
 #   git_status.sh --exclude-dirs '$MY_EXCLUDE_DIRS "*.suffix"'
+#
+#   >
+#   # prints not empty status only
+#   git_status.sh -sn
 
 # Script both for execution and inclusion.
 [[ -n "$BASH" ]] || return 0 || exit 0 # exit to avoid continue if the return can not be called
@@ -103,6 +134,9 @@ function call_buf()
   local IFS=$' \t'
   local buf
   local last_error
+
+  # skip all flags
+  while [[ "${1:0:1}" == '-' ]]; do shift; done
 
   # prevent execution in a subshell
   case "$1" in
@@ -136,6 +170,9 @@ function exec_buf()
   local IFS=$' \t'
   local buf
   local last_error
+
+  # skip all flags
+  while [[ "${1:0:1}" == '-' ]]; do shift; done
 
   # prevent execution in a subshell
   case "$1" in
@@ -249,6 +286,12 @@ function git_status()
   local flag_v=0
   local no_print_empty=0
   local no_stashes=0
+  local no_unmerged_conflicts=0
+  local no_diff_checks=0
+  local no_conflicts=0
+  local no_checks=0
+  local no_colors=0
+  local status_only=0
   local exclude_dirs
 
   local skip_flag
@@ -264,6 +307,24 @@ function git_status()
     elif [[ "$flag" == '-no-stashes' ]]; then
       no_stashes=1
       skip_flag=1
+    elif [[ "$flag" == '-no-unmerged-conflicts' ]]; then
+      no_unmerged_conflicts=1
+      skip_flag=1
+    elif [[ "$flag" == '-no-diff-checks' ]]; then
+      no_diff_checks=1
+      skip_flag=1
+    elif [[ "$flag" == '-no-conflicts' ]]; then
+      no_conflicts=1
+      skip_flag=1
+    elif [[ "$flag" == '-no-checks' ]]; then
+      no_checks=1
+      skip_flag=1
+    elif [[ "$flag" == '-no-colors' ]]; then
+      no_colors=1
+      skip_flag=1
+    elif [[ "$flag" == '-status-only' ]]; then
+      status_only=1
+      skip_flag=1
     elif [[ "$flag" == '-exclude-dirs' ]]; then
       exclude_dirs="$2"
       skip_flag=1
@@ -278,6 +339,16 @@ function git_status()
       while [[ -n "$flag" ]]; do
         if [[ "${flag:0:1}" == 'n' ]]; then
           no_print_empty=1
+        elif [[ "${flag:0:1}" == 'S' ]]; then
+          no_stashes=1
+        elif [[ "${flag:0:1}" == 'L' ]]; then
+          no_conflicts=1
+        elif [[ "${flag:0:1}" == 'N' ]]; then
+          no_checks=1
+        elif [[ "${flag:0:1}" == 'l' ]]; then
+          no_colors=1
+        elif [[ "${flag:0:1}" == 's' ]]; then
+          status_only=1
         elif [[ "${flag:0:1}" == 'v' ]]; then
           flag_v=1
         else
@@ -315,6 +386,27 @@ function git_status()
 
   local IFS
   local i
+
+  if (( status_only )); then
+    no_stashes=1
+    no_conflicts=1
+    no_checks=1
+  fi
+
+  if (( no_conflicts )); then
+    no_unmerged_conflicts=1
+  fi
+  if (( no_checks )); then
+    no_diff_checks=1
+  fi
+
+  if (( ! no_colors )); then
+    git_bare_flags=(-c color.ui=always --no-pager)
+    git_diff_bare_flags=(--color=always)
+  else
+    git_bare_flags=(-c color.ui=no --no-pager)
+    git_diff_bare_flags=(--color=never)
+  fi
 
   if [[ -z "$dir" ]]; then
     dir=.
@@ -375,6 +467,57 @@ $0: info: exclude_dirs: \`$exclude_dirs\`" >&2
     trap 'rm "$accum_buf_file"; trap - RETURN' RETURN
   fi
 
+  function git_status_impl()
+  {
+    local IFS=$' \t'
+
+    if (( is_buf )); then
+      has_accum_buf=0
+      : > "$accum_buf_file" # trim the buffer
+    fi
+
+    if (( flag_v )); then
+      call_auto_buf pushd "$git_path"
+    else
+      exec_auto_buf realpath "$git_path"
+      pushd "$git_path" > /dev/null
+    fi && {
+      # print status
+      call_auto_buf git ${git_bare_flags[*]} status "${args[@]}"
+      accum_buf_status
+
+      # print stashes
+      if (( ! no_stashes )); then
+        call_auto_buf git ${git_bare_flags[*]} stash list
+        accum_buf_status
+      fi
+
+      # print unmerged conflicts
+      if (( ! no_unmerged_conflicts )); then
+        call_auto_buf git ${git_bare_flags[*]} diff ${git_diff_bare_flags[*]} --name-only --diff-filter=U --relative
+        accum_buf_status
+      fi
+
+      # print diff checks
+      if (( ! no_diff_checks )); then
+        call_auto_buf git ${git_bare_flags[*]} diff ${git_diff_bare_flags[*]} --check
+        accum_buf_status
+      fi
+
+      if (( flag_v )); then
+        call_auto_buf popd
+      else
+        popd > /dev/null
+      fi
+    }
+
+    exec_auto_buf echo ---
+
+    if (( has_accum_buf )); then
+      cat "$accum_buf_file"
+    fi
+  }
+
   if [[ -n "$name_pttn" ]]; then
     detect_find
 
@@ -383,75 +526,11 @@ $0: info: exclude_dirs: \`$exclude_dirs\`" >&2
 
     IFS=$'\r\n'; for git_path in `eval \"\$SHELL_FIND\" \"\$dir\"$find_bare_flags -iname \"\$name_pttn\" -type d`; do # IFS - with trim trailing line feeds
       git_path="${git_path%/.git}"
-
-      if (( is_buf )); then
-        has_accum_buf=0
-        : > "$accum_buf_file" # trim the buffer
-      fi
-
-      if (( flag_v )); then
-        call_auto_buf pushd "$git_path" && {
-          call_auto_buf git -c color.status=always status "${args[@]}"
-          accum_buf_status
-          if (( ! no_stashes )); then
-            call_auto_buf git stash list
-            accum_buf_status
-          fi
-          call_auto_buf popd
-        }
-      else
-        exec_auto_buf realpath "$git_path"
-        pushd "$git_path" > /dev/null && {
-          call_auto_buf git -c color.status=always status "${args[@]}"
-          accum_buf_status
-          if (( ! no_stashes )); then
-            call_auto_buf git stash list
-            accum_buf_status
-          fi
-          popd > /dev/null
-        }
-      fi
-      exec_auto_buf echo ---
-
-      if (( has_accum_buf )); then
-        cat "$accum_buf_file"
-      fi
+      git_status_impl
     done
   else
-    git_path="${git_path%/.git}"
-
-    if (( is_buf )); then
-      has_accum_buf=0
-      : > "$accum_buf_file" # trim the buffer
-    fi
-
-    if (( flag_v )); then
-      call_auto_buf pushd "$dir" && {
-        call_auto_buf git -c color.status=always status "${args[@]}"
-        accum_buf_status
-        if (( ! no_stashes )); then
-          call_auto_buf git stash list
-          accum_buf_status
-        fi
-        call_auto_buf popd
-      }
-    else
-      exec_auto_buf realpath "$dir"
-      pushd "$dir" > /dev/null && {
-        call_auto_buf git -c color.status=always status "${args[@]}"
-        accum_buf_status
-        if (( ! no_stashes )); then
-          call_auto_buf git stash list
-          accum_buf_status
-        fi
-        popd > /dev/null
-      }
-    fi
-    exec_auto_buf echo ---
-
-    if (( has_accum_buf )); then
-      cat "$accum_buf_file"
-    fi
+    git_path="$dir"
+    git_status_impl
   fi
 
   return 0
