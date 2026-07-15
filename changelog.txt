@@ -1,3 +1,6 @@
+2026.07.15:
+* changed: scripts: vcstool/git_gen_gitmodules.sh, git_status.sh: minor refactor
+
 2026.07.11:
 * fixed: scripts/git_status.sh: interactive output now is disable by default
 * new: scripts/git_status.sh: print unmerged conflicts by default and `--no-unmerged-conflicts` flag to skip it

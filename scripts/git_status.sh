@@ -59,7 +59,7 @@
 #     used.
 #     If the global variable is not defined:
 #
-#       `"~*" ".git" ".svn" ".hg" ".log" ".temp" "_ext" "_externals" "ext" "_out" "out" "Output" "*.backup" "*.bak" "*.old" ".vs" "__pycache__"`
+#       `"~*" ".git" ".svn" ".hg" ".log" ".temp" "_ext" "_externals" "ext" "externals" "_out" "out" "Output" "*.backup" "*.bak" "*.old" ".vs" "__pycache__"`
 #
 #     CAUTION:
 #       In case of the parameter you have to quote or escape only the Unix file
@@ -107,6 +107,14 @@
 #   >
 #   # prints not empty status only
 #   git_status.sh -sn
+
+# NOTE:
+#   By default the `CR` character is treated as a white space by the Git.
+#   To avoid this you can declare the `CR` as not a white space in case of
+#   `CRLF` sequence:
+#
+#     >
+#     git config --system core.whitespace cr-at-eol
 
 # Script both for execution and inclusion.
 [[ -n "$BASH" ]] || return 0 || exit 0 # exit to avoid continue if the return can not be called
@@ -416,7 +424,7 @@ function git_status()
   fi
 
   if [[ -z "${DEFAULT_EXCLUDE_DIRS+x}" ]]; then
-    local DEFAULT_EXCLUDE_DIRS='"~*" ".git" ".svn" ".hg" ".log" ".temp" "_ext" "_externals" "ext" "_out" "out" "Output" "*.backup" "*.bak" "*.old" ".vs" "__pycache__"'
+    local DEFAULT_EXCLUDE_DIRS='"~*" ".git" ".svn" ".hg" ".log" ".temp" "_ext" "_externals" "ext" "externals" "_out" "out" "Output" "*.backup" "*.bak" "*.old" ".vs" "__pycache__"'
   fi
 
   if [[ -z "$exclude_dirs" ]]; then
