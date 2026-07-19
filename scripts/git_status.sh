@@ -132,7 +132,17 @@ function debug_echo()
 function call()
 {
   local IFS=$' \t'
+
+  if (( ! no_colors )); then
+    echo -en "\e[1;33m"
+  fi
+
   echo ">$*"
+
+  if (( ! no_colors )); then
+    echo -en "\e[0m"
+  fi
+
   "$@"
 }
 
@@ -141,10 +151,17 @@ function call_buf()
 {
   local IFS=$' \t'
   local buf
-  local last_error
+  local last_error=0
 
-  # skip all flags
-  while [[ "${1:0:1}" == '-' ]]; do shift; done
+  case "$1" in
+    echo)
+      # do not skip
+      ;;
+    *)
+      # skip all flags
+      while [[ "${1:0:1}" == '-' ]]; do shift; done
+      ;;
+  esac
 
   # prevent execution in a subshell
   case "$1" in
@@ -154,20 +171,41 @@ function call_buf()
       #IFS=$'\r\n'
       buf="${DIRSTACK[0]} ${DIRSTACK[1]}"
       ;;
+    echo)
+      ;;
     *)
       buf=$("$@")
       last_error=$?
       ;;
   esac
 
-  # if has not line return characters
-  if [[ "$buf" =~ [^\r\n]+ ]]; then
-    IFS=$' \t' echo ">$*"
-    echo "$buf"
-    last_error=0
-  else
-    last_error=1
-  fi
+  IFS=$' \t'
+
+  case "$1" in
+    echo)
+      "$@"
+      last_error=$?
+      ;;
+    *)
+      # if has not line return characters
+      if [[ "$buf" =~ [^\r\n]+ ]]; then
+        if (( ! no_colors )); then
+          echo -en "\e[1;33m"
+        fi
+
+        echo ">$*"
+
+        if (( ! no_colors )); then
+          echo -en "\e[0m"
+        fi
+
+        echo "$buf"
+        last_error=0
+      else
+        last_error=1
+      fi
+      ;;
+  esac
 
   return $last_error
 }
@@ -177,10 +215,17 @@ function exec_buf()
 {
   local IFS=$' \t'
   local buf
-  local last_error
+  local last_error=0
 
-  # skip all flags
-  while [[ "${1:0:1}" == '-' ]]; do shift; done
+  case "$1" in
+    echo)
+      # do not skip
+      ;;
+    *)
+      # skip all flags
+      while [[ "${1:0:1}" == '-' ]]; do shift; done
+      ;;
+  esac
 
   # prevent execution in a subshell
   case "$1" in
@@ -190,16 +235,28 @@ function exec_buf()
       #IFS=$'\r\n'
       buf="${DIRSTACK[0]} ${DIRSTACK[1]}"
       ;;
+    echo)
+      ;;
     *)
       buf=$("$@")
       last_error=$?
       ;;
   esac
 
-  # if not empty
-  if [[ -n "$buf" ]]; then
-    echo "$buf"
-  fi
+  IFS=$' \t'
+
+  case "$1" in
+    echo)
+      "$@"
+      last_error=$?
+      ;;
+    *)
+      # if not empty
+      if [[ -n "$buf" ]]; then
+        echo "$buf"
+      fi
+      ;;
+  esac
 
   return $last_error
 }
@@ -485,9 +542,26 @@ $0: info: exclude_dirs: \`$exclude_dirs\`" >&2
     fi
 
     if (( flag_v )); then
+      if (( ! no_color )); then
+        call_auto_buf echo -en "\e[0;32m"
+      fi
+
       call_auto_buf pushd "$git_path"
+
+      if (( ! no_color )); then
+        call_auto_buf echo -en "\e[0m"
+      fi
     else
+      if (( ! no_color )); then
+        exec_auto_buf echo -en "\e[0;32m"
+      fi
+
       exec_auto_buf realpath "$git_path"
+
+      if (( ! no_color )); then
+        exec_auto_buf echo -en "\e[0m"
+      fi
+
       pushd "$git_path" > /dev/null
     fi && {
       # print status
@@ -519,7 +593,7 @@ $0: info: exclude_dirs: \`$exclude_dirs\`" >&2
       fi
     }
 
-    exec_auto_buf echo ---
+    exec_auto_buf echo -e "\n---\n "
 
     if (( has_accum_buf )); then
       cat "$accum_buf_file"

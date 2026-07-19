@@ -1,3 +1,6 @@
+2026.07.19:
+* changed: scripts/git_status.sh: more colored and readable output
+
 2026.07.15:
 * changed: scripts: vcstool/git_gen_gitmodules.sh, git_status.sh: minor refactor
 
