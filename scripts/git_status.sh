@@ -6,31 +6,40 @@
 
 # Description:
 #   Script to find repositories with uncommitted changes searched by the `find`
-#   pattern.
+#   pattern. In addition the script makes different checks.
 
 # <flags>:
 #   -v
 #     Verbose mode.
+#     Prints worktrees list of a single worktree even if not added.
 #
 #   -n
 #   --no-print-empty
 #     Don't print empty output or with only empty lines (only line returns).
 #
 #     NOTE:
-#       The print only a not empty output results in the output buffering,
+#       The print only a not empty output does result in the output buffering,
 #       which means the result won't be printed until a command exit. So this
-#       implies disable of the piping.
+#       implies disable of a line-by-line piping.
+#
+#     NOTE:
+#       You can mix `-v` and `-n`, in which case a verbose mode is used, but
+#       the commands has contained an empty output does not print.
+#
+#   -W
+#   --no-worktrees
+#     Don't traverse worktrees.
 #
 #   -S
 #   --no-stashes
-#     Don't print stashes.
+#     Don't traverse stashes.
 #
 #   --no-unmerged-conflicts
-#     Don't print unmerged conflicts (`git diff --diff-filter=U ...`).
+#     Don't check unmerged conflicts (`git diff --diff-filter=U ...`).
 #     Details: https://stackoverflow.com/questions/3065650/whats-the-simplest-way-to-list-conflicted-files-in-git#
 #
 #   --no-diff-checks
-#     Don't print diff checks (`git diff --check ...`).
+#     Don't make diff checks (`git diff --check ...`).
 #
 #   -L
 #   --no-conflicts
@@ -51,13 +60,28 @@
 #     Print status only.
 #     Implies `--no-stashes`, `--no-conflicts`, `--no-checks` flags.
 #
+#     NOTE:
+#       To exclude traverse of worktrees you have to explicitly use
+#       `--no-worktrees` flag.
+#
 #   --exclude-dirs <dirs-list>
 #     List of directories to exclude from the search, where `<dirs-list>`
 #     is a string evaluatable to the shell array.
 #
-#     If not defined, then the `DEFAULT_EXCLUDE_DIRS` global variable is
-#     used.
-#     If the global variable is not defined:
+#     If not defined, then the `DEFAULT_EXCLUDE_DIRS` and `USER_EXCLUDE_DIRS`
+#     global variables is used.
+#
+#     If defined, then <dirs-list> is used instead of `DEFAULT_EXCLUDE_DIRS`
+#     variable.
+#
+#     CAUTION:
+#       To avoid use of the global `USER_EXCLUDE_DIRS` variable value you
+#       may unset it or set it to anything before the call.
+#       To avoid use of the global `DEFAULT_EXCLUDE_DIRS` variable value you
+#       must set it to anything (can be empty) before the call.
+#
+#     If the `DEFAULT_EXCLUDE_DIRS` variable is not defined, then the builtin
+#     default is used instead:
 #
 #       `"~*" ".git" ".svn" ".hg" ".log" ".temp" "_ext" "_externals" "ext" "externals" "_out" "out" "Output" "*.backup" "*.bak" "*.old" ".vs" "__pycache__"`
 #
@@ -67,10 +91,9 @@
 #
 #         `*`, `?`, `<`, `>`, `\`, `|`, `&`, `~`, `$`, `!`, `"`, `'`, ```, ...
 #
-#       In case of the `DEFAULT_EXCLUDE_DIRS` variable you must quote or
-#       escape both the Windows AND the Unix file globbing characters
-#       including a Unix shell special control characters (depends on what
-#       subsystem or Shell is used):
+#       In case of the variable you must quote or escape both the Windows AND
+#       the Unix file globbing characters including a Unix shell special
+#       control characters (depends on what subsystem or Shell is used):
 #
 #         `*`, `?`, `<`, `>`, `^`, `\`, `|`, `&`, `~`, `$`, `!`, `"`, `'`, ```, ...
 
@@ -268,9 +291,31 @@ function call_accum_buf()
   call_buf "$@" >> "$accum_buf_file"
 }
 
+# call with accumulated temp buffering
+function call_temp_buf()
+{
+  local IFS=$' \t'
+  call_buf "$@" > "$temp_buf_file"
+}
+
+function accum_temp_buf()
+{
+  if (( is_buf )); then
+    cat "$temp_buf_file" >> "$accum_buf_file"
+  else
+    cat "$temp_buf_file"
+  fi
+
+  : > "$temp_buf_file" # trim the buffer
+}
+
 # exec with accumulated buffering
 function exec_accum_buf()
 {
+  if (( ! is_buf )); then
+    return
+  fi
+
   local IFS=$' \t'
   exec_buf "$@" >> "$accum_buf_file"
 }
@@ -302,6 +347,8 @@ function accum_buf_status()
       (( has_accum_buf |= 1 ))
     fi
   fi
+
+  return $last_error
 }
 
 # Based on:
@@ -346,10 +393,12 @@ function detect_find()
 
 function git_status()
 {
+  local IFS
   local flag="$1"
 
   local flag_v=0
   local no_print_empty=0
+  local no_worktrees=0
   local no_stashes=0
   local no_unmerged_conflicts=0
   local no_diff_checks=0
@@ -371,6 +420,9 @@ function git_status()
       skip_flag=1
     elif [[ "$flag" == '-no-stashes' ]]; then
       no_stashes=1
+      skip_flag=1
+    elif [[ "$flag" == '-no-worktrees' ]]; then
+      no_worktrees=1
       skip_flag=1
     elif [[ "$flag" == '-no-unmerged-conflicts' ]]; then
       no_unmerged_conflicts=1
@@ -404,6 +456,8 @@ function git_status()
       while [[ -n "$flag" ]]; do
         if [[ "${flag:0:1}" == 'n' ]]; then
           no_print_empty=1
+        elif [[ "${flag:0:1}" == 'W' ]]; then
+          no_worktrees=1
         elif [[ "${flag:0:1}" == 'S' ]]; then
           no_stashes=1
         elif [[ "${flag:0:1}" == 'L' ]]; then
@@ -448,8 +502,6 @@ function git_status()
   local args=("$@")
 
   local git_path
-
-  local IFS
   local i
 
   if (( status_only )); then
@@ -498,7 +550,7 @@ function git_status()
   dir="${dir%/.git}"
 
   local exclude_dirs_arr
-  eval exclude_dirs_arr=($exclude_dirs) || {
+  eval exclude_dirs_arr=($exclude_dirs $USER_EXCLUDE_DIRS) || {
     echo "$0: error: invalid parameter.
 $0: info: exclude_dirs: \`$exclude_dirs\`" >&2
     return 255
@@ -525,33 +577,95 @@ $0: info: exclude_dirs: \`$exclude_dirs\`" >&2
     is_buf=1
   fi
 
+  local temp_buf_file="$(mktemp /tmp/temp_buf.XXXXXX)"
+
   if (( is_buf )); then
-    local has_accum_buf
+    local has_accum_buf=0
     local accum_buf_file="$(mktemp /tmp/accum_buf.XXXXXX)"
 
-    trap 'rm "$accum_buf_file"; trap - RETURN' RETURN
+    : > "$accum_buf_file" # trim the buffer
+
+    function git_status_cleanup_impl()
+    {
+      rm "$accum_buf_file"
+      rm "$temp_buf_file"
+    }
+  else
+    function git_status_cleanup_impl()
+    {
+      rm "$temp_buf_file"
+    }
   fi
+
+  trap 'git_status_cleanup_impl; trap - RETURN' RETURN
+
+  : > "$temp_buf_file" # trim the buffer
+
+  local is_record_printed=0
+  local has_recurse_records
+  local git_worktree_list
+  local git_worktree_recurse=0
+  local git_bare_C_path=()
+  
+  function has_worktrees()
+  {
+    local IFS
+    local git_worktree_path _
+    local i=0
+
+    while IFS=$' \t' read git_worktree_path _; do
+      if (( i >= 2 )); then # skip first 2 lines
+        return 0
+      fi
+      (( i++ ))
+    done < "$1"
+
+    return 1
+  }
+
+  function git_worktree_recurse_impl()
+  {
+    local IFS
+    local git_worktree_path _
+    local i=0
+
+    if (( is_buf )); then
+      if (( has_accum_buf )); then
+        #echo ===
+        cat "$accum_buf_file"
+        has_accum_buf=0
+        is_record_printed=1
+      fi
+
+      : > "$accum_buf_file" # trim the buffer
+    fi
+
+    trap 'git_worktree_list=''; git_worktree_recurse=0; git_bare_C_path=(); trap - RETURN' RETURN
+
+    git_worktree_recurse=1
+
+    while IFS=$' \t' read git_worktree_path _; do
+      if (( i >= 2 )); then # skip first 2 lines
+        git_bare_C_path=(-C "$git_worktree_path")
+        git_status_impl
+      fi
+      (( i++ ))
+    done <<< "$git_worktree_list"
+  }
 
   function git_status_impl()
   {
     local IFS=$' \t'
 
-    if (( is_buf )); then
-      has_accum_buf=0
-      : > "$accum_buf_file" # trim the buffer
+    if (( is_record_printed )); then
+      echo -e "\n---\n"
     fi
 
-    if (( flag_v )); then
-      if (( ! no_color )); then
-        call_auto_buf echo -en "\e[0;32m"
-      fi
+    is_record_printed=0
 
-      call_auto_buf pushd "$git_path"
+    if (( no_worktrees || ! git_worktree_recurse )); then
+      has_recurse_records=0
 
-      if (( ! no_color )); then
-        call_auto_buf echo -en "\e[0m"
-      fi
-    else
       if (( ! no_color )); then
         exec_auto_buf echo -en "\e[0;32m"
       fi
@@ -562,41 +676,96 @@ $0: info: exclude_dirs: \`$exclude_dirs\`" >&2
         exec_auto_buf echo -en "\e[0m"
       fi
 
-      pushd "$git_path" > /dev/null
+      if (( ! is_buf )); then
+        is_record_printed=1
+      fi
+
+      if (( flag_v )); then
+        call_auto_buf pushd "$git_path"
+      else
+        pushd "$git_path" > /dev/null
+      fi
+    else
+      if (( ! no_color )); then
+        exec_auto_buf echo -en "\e[0;36m"
+      fi
+
+      exec_auto_buf echo "$git_worktree_path (worktree)"
+
+      if (( ! no_color )); then
+        exec_auto_buf echo -en "\e[0m"
+      fi
+
+      if (( ! is_buf )); then
+        is_record_printed=1
+      fi
+
+      :
     fi && {
+      # request, save and print worktrees
+      if (( ! no_worktrees && ! git_worktree_recurse )); then
+        if call_temp_buf git ${git_bare_flags[*]} worktree list; then
+          # CAUTION: The `if` statement must has a complete form (together with the `else`), otherwise trailing `&&` would NOT work!
+          if (( flag_v )); then
+            :
+          elif has_worktrees "$temp_buf_file"; then
+            has_recurse_records=1
+            :
+          else
+            ! : # instead of `false` call, faster
+          fi && {
+            git_worktree_list=$(<"$temp_buf_file")
+            accum_temp_buf
+            accum_buf_status
+          }
+        fi
+      fi
+
       # print status
-      call_auto_buf git ${git_bare_flags[*]} status "${args[@]}"
+      call_auto_buf git ${git_bare_C_path[*]} ${git_bare_flags[*]} status "${args[@]}"
       accum_buf_status
 
       # print stashes
-      if (( ! no_stashes )); then
-        call_auto_buf git ${git_bare_flags[*]} stash list
+      if (( ! no_stashes && ! git_worktree_recurse )); then
+        call_auto_buf git ${git_bare_C_path[*]} ${git_bare_flags[*]} stash list
         accum_buf_status
       fi
 
       # print unmerged conflicts
       if (( ! no_unmerged_conflicts )); then
-        call_auto_buf git ${git_bare_flags[*]} diff ${git_diff_bare_flags[*]} --name-only --diff-filter=U --relative
+        call_auto_buf git ${git_bare_C_path[*]} ${git_bare_flags[*]} diff ${git_diff_bare_flags[*]} --name-only --diff-filter=U --relative
         accum_buf_status
       fi
 
       # print diff checks
       if (( ! no_diff_checks )); then
-        call_auto_buf git ${git_bare_flags[*]} diff ${git_diff_bare_flags[*]} --check
+        call_auto_buf git ${git_bare_C_path[*]} ${git_bare_flags[*]} diff ${git_diff_bare_flags[*]} --check
         accum_buf_status
       fi
 
-      if (( flag_v )); then
-        call_auto_buf popd
-      else
-        popd > /dev/null
+      # traverse worktrees starting from the second
+      if (( ! no_worktrees && ! git_worktree_recurse && ( flag_v || has_recurse_records ) )); then
+        git_worktree_recurse_impl
+      fi
+
+      if (( ! git_worktree_recurse )); then
+        if (( flag_v )); then
+          call_auto_buf popd
+        else
+          popd > /dev/null
+        fi
       fi
     }
 
-    exec_auto_buf echo -e "\n---\n "
+    if (( is_buf )); then
+      if (( has_accum_buf )); then
+        #echo ===
+        cat "$accum_buf_file"
+        has_accum_buf=0
+        is_record_printed=1
+      fi
 
-    if (( has_accum_buf )); then
-      cat "$accum_buf_file"
+      : > "$accum_buf_file" # trim the buffer
     fi
   }
 
@@ -613,6 +782,10 @@ $0: info: exclude_dirs: \`$exclude_dirs\`" >&2
   else
     git_path="$dir"
     git_status_impl
+  fi
+
+  if (( is_record_printed )); then
+    echo -e "\n---\n"
   fi
 
   return 0

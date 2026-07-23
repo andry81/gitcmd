@@ -1,3 +1,9 @@
+2026.07.23:
+* fixed: scripts/git_status.sh: execution fixup
+* new: scripts/git_status.sh: worktrees traverse and `--no-worktrees` flag to skip the traverse
+* new: scripts: git_status.sh, vcstool/git_gen_gitmodules.sh: `USER_EXCLUDE_DIRS` environment variable apply
+* refactor: scripts: git_status.sh, vcstool/git_gen_gitmodules.sh: documentation refactor
+
 2026.07.19:
 * changed: scripts/git_status.sh: more colored and readable output
 

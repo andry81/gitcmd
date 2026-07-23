@@ -22,9 +22,20 @@
 #     List of directories to exclude from the search, where `<dirs-list>`
 #     is a string evaluatable to the shell array.
 #
-#     If not defined, then the `DEFAULT_EXCLUDE_DIRS` global variable is
-#     used.
-#     If the global variable is not defined:
+#     If not defined, then the `DEFAULT_EXCLUDE_DIRS` and `USER_EXCLUDE_DIRS`
+#     global variables is used.
+#
+#     If defined, then <dirs-list> is used instead of `DEFAULT_EXCLUDE_DIRS`
+#     variable.
+#
+#     CAUTION:
+#       To avoid use of the global `USER_EXCLUDE_DIRS` variable value you
+#       may unset it or set it to anything before the call.
+#       To avoid use of the global `DEFAULT_EXCLUDE_DIRS` variable value you
+#       must set it to anything (can be empty) before the call.
+#
+#     If the `DEFAULT_EXCLUDE_DIRS` variable is not defined, then the builtin
+#     default is used instead:
 #
 #       `"~*" ".git" ".svn" ".hg" ".log" ".temp" "_ext" "_externals" "ext" "externals" "_out" "out" "Output" "*.backup" "*.bak" "*.old" ".vs" "__pycache__"`
 #
@@ -34,10 +45,9 @@
 #
 #         `*`, `?`, `<`, `>`, `\`, `|`, `&`, `~`, `$`, `!`, `"`, `'`, ```, ...
 #
-#       In case of the `DEFAULT_EXCLUDE_DIRS` variable you must quote or
-#       escape both the Windows AND the Unix file globbing characters
-#       including a Unix shell special control characters (depends on what
-#       subsystem or Shell is used):
+#       In case of the variable you must quote or escape both the Windows AND
+#       the Unix file globbing characters including a Unix shell special
+#       control characters (depends on what subsystem or Shell is used):
 #
 #         `*`, `?`, `<`, `>`, `^`, `\`, `|`, `&`, `~`, `$`, `!`, `"`, `'`, ```, ...
 #
@@ -339,7 +349,7 @@ function git_gen_gitmodules()
   local output_file_name_prefix="${3:-".gitmodules"}"
 
   local exclude_dirs_arr
-  eval exclude_dirs_arr=($exclude_dirs) || {
+  eval exclude_dirs_arr=($exclude_dirs $USER_EXCLUDE_DIRS) || {
     echo "$0: error: invalid parameter.
 $0: info: exclude_dirs: \`$exclude_dirs\`" >&2
     return 255
