@@ -1,4 +1,7 @@
 2026.07.23:
+* changed: scripts/git_status.sh: code minor improvement
+
+2026.07.23:
 * fixed: scripts: git_pull_remote*.sh, git_sync_remotes.sh: workaround to avoid `git fetch` error `fatal: refusing to fetch into branch '...' checked out at ...`
 
 2026.07.23:

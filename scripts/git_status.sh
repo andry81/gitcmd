@@ -301,9 +301,9 @@ function call_temp_buf()
 function accum_temp_buf()
 {
   if (( is_buf )); then
-    cat "$temp_buf_file" >> "$accum_buf_file"
+    echo "$(<"$temp_buf_file")" >> "$accum_buf_file"
   else
-    cat "$temp_buf_file"
+    echo "$(<"$temp_buf_file")"
   fi
 
   : > "$temp_buf_file" # trim the buffer
@@ -632,7 +632,7 @@ $0: info: exclude_dirs: \`$exclude_dirs\`" >&2
     if (( is_buf )); then
       if (( has_accum_buf )); then
         #echo ===
-        cat "$accum_buf_file"
+        echo "$(<"$accum_buf_file")"
         has_accum_buf=0
         is_record_printed=1
       fi
@@ -760,7 +760,7 @@ $0: info: exclude_dirs: \`$exclude_dirs\`" >&2
     if (( is_buf )); then
       if (( has_accum_buf )); then
         #echo ===
-        cat "$accum_buf_file"
+        echo "$(<"$accum_buf_file")"
         has_accum_buf=0
         is_record_printed=1
       fi
