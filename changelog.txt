@@ -1,4 +1,7 @@
 2026.07.23:
+* fixed: scripts: git_pull_remote*.sh, git_sync_remotes.sh: workaround to avoid `git fetch` error `fatal: refusing to fetch into branch '...' checked out at ...`
+
+2026.07.23:
 * fixed: scripts/git_status.sh: execution fixup
 * new: scripts/git_status.sh: worktrees traverse and `--no-worktrees` flag to skip the traverse
 * new: scripts: git_status.sh, vcstool/git_gen_gitmodules.sh: `USER_EXCLUDE_DIRS` environment variable apply

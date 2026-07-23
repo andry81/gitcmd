@@ -105,7 +105,7 @@ function git_pull_remote_heads()
   #
   for refspec in "${refspecs[@]}"; do
     # fetch does use the fast-forward merge only
-    evalcall git fetch$fetch_cmdline "'$remote'" -- "'$refspec'"
+    evalcall git fetch -u $fetch_cmdline "'$remote'" -- "'$refspec'"
     echo
   done
 }

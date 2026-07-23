@@ -234,7 +234,7 @@ function git_sync_remotes()
     refs_cmdline="$refs_cmdline${refs_cmdline:+ }\"$branch\""
 
     # fetch does use the fast-forward merge only
-    call git fetch "$remote" -- "refs/heads/$branch:$branch"
+    call git fetch -u "$remote" -- "refs/heads/$branch:$branch"
     echo
   done
 

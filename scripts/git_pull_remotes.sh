@@ -201,7 +201,7 @@ function git_pull_remotes()
     #
     for branch in "${branches[@]}"; do
       # fetch does use the fast-forward merge only
-      evalcall git fetch$fetch_cmdline "'$from_remote'" -- "'refs/heads/$branch:$branch'"
+      evalcall git fetch -u $fetch_cmdline "'$from_remote'" -- "'refs/heads/$branch:$branch'"
       echo
     done
   done
