@@ -3,3 +3,5 @@
 - Add script to remove commits by list of tree path pattern.
 
 - Skip `.git` directories inside worktree directories (with `.git` file instead of `.git` directory)
+
+- Detect not pushed commits for remotes in `git-status.sh` script

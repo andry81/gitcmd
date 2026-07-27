@@ -1,4 +1,7 @@
 2026.07.27:
+* changed: TODO.txt: todo update
+
+2026.07.27:
 * new: scripts/git_filter_*_trim_parents.sh: scripts to trim a commit parents does found using a date-time boundary
 * changed: scripts/git_pull.sh: code cleanup
 * changed: TODO.txt: todo update
