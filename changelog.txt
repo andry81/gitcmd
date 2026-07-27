@@ -1,3 +1,7 @@
+2026.07.27:
+* new: scripts/git_pull.sh: script to find all git working copies starting a directory and call `git pull` in it
+* refactor: scripts/*.sh: cleanup
+
 2026.07.23:
 * changed: scripts/git_status.sh: code minor improvement
 

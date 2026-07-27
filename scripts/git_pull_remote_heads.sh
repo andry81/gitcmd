@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # USAGE:
-#   git_pull_remotes_heads.sh <remote> [// <fetch-cmd-line>]
+#   git_pull_remote_heads.sh <remote> [// <fetch-cmd-line>]
 
 # Description:
 #   Script to pull all branches from a remote with the fast-forward merge only.
