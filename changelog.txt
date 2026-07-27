@@ -1,4 +1,9 @@
 2026.07.27:
+* new: scripts/git_filter_*_trim_parents.sh: scripts to trim a commit parents does found using a date-time boundary
+* changed: scripts/git_pull.sh: code cleanup
+* changed: TODO.txt: todo update
+
+2026.07.27:
 * new: scripts/git_pull.sh: script to find all git working copies starting a directory and call `git pull` in it
 * refactor: scripts/*.sh: cleanup
 

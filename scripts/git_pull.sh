@@ -400,10 +400,8 @@ function git_pull()
 
   if (( ! no_colors )); then
     git_bare_flags=(-c color.ui=always --no-pager)
-    git_pull_bare_flags=(--color=always)
   else
     git_bare_flags=(-c color.ui=no --no-pager)
-    git_pull_bare_flags=(--color=never)
   fi
 
   if [[ -z "$dir" ]]; then
