@@ -185,6 +185,8 @@ function detect_find()
       old_shopt=''
     fi
 
+    local path
+
     IFS=$'\r\n'; for path in `where find 2>/dev/null`; do # IFS - with trim trailing line feeds
       case "$path" in # with case insensitive comparison
         "$SYSTEMROOT"\\*) ;;
