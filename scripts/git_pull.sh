@@ -11,6 +11,14 @@
 #   -v
 #     Verbose mode.
 #
+#   -w
+#   --no-skip-worktrees
+#     Don't skip traverse a worktree directories including nested worktrees.
+#
+#     NOTE:
+#       By default the `find` command skips all the directories with a `.git`
+#       file (the worktree directory does contain it).
+#
 #   -l
 #   --no-colors
 #     Print without colors.
@@ -335,6 +343,7 @@ function git_pull()
   local flag="$1"
 
   local flag_v=0
+  local no_skip_worktrees=0 # note: doesn't skip any directory with a `.git` file, not just the worktree directory only
   local no_colors=0
   local exclude_dirs
 
@@ -345,7 +354,10 @@ function git_pull()
     skip_flag=0
 
     # long flags
-    if [[ "$flag" == '-no-colors' ]]; then
+    if [[ "$flag" == '-no-skip-worktrees' ]]; then
+      no_skip_worktrees=1
+      skip_flag=1
+    elif [[ "$flag" == '-no-colors' ]]; then
       no_colors=1
       skip_flag=1
     elif [[ "$flag" == '-exclude-dirs' ]]; then
@@ -360,7 +372,9 @@ function git_pull()
     # short flags
     if (( ! skip_flag )); then
       while [[ -n "$flag" ]]; do
-        if [[ "${flag:0:1}" == 'l' ]]; then
+        if [[ "${flag:0:1}" == 'w' ]]; then
+          no_skip_worktrees=1
+        elif [[ "${flag:0:1}" == 'l' ]]; then
           no_colors=1
         elif [[ "${flag:0:1}" == 'v' ]]; then
           flag_v=1
@@ -436,12 +450,18 @@ $0: info: exclude_dirs: \`$exclude_dirs\`" >&2
   # build exclude dirs
   local find_bare_flags
 
-  # prefix all relative paths with '*/' to apply the exclude dirs at any level
-  # suffix all paths with '/*' to exclude the search after the exclude directory
+  # 1. prefix all relative paths with '*/' to apply the exclude dirs at any level
+  # 2. suffix all paths with '/*' to exclude the search after the exclude directory
+  # 3. escape all `\`
   for (( i=0; i < ${#exclude_dirs_arr[@]}; i++ )); do
     if [[ "${exclude_dirs_arr[i]:0:1}" != "/" && "${exclude_dirs_arr[i]:0:2}" != "./" && "${exclude_dirs_arr[i]:0:3}" != "../" ]]; then
-      exclude_dirs_arr[i]="*/${exclude_dirs_arr[i]}/*"
+      if (( no_skip_worktrees )); then
+        exclude_dirs_arr[i]="*/${exclude_dirs_arr[i]}/*"
+      else
+        exclude_dirs_arr[i]="*/${exclude_dirs_arr[i]}"
+      fi
     fi
+    exclude_dirs_arr="${exclude_dirs_arr//\\/\\\\}"
   done
 
   for (( i=0; i < ${#exclude_dirs_arr[@]}; i++ )); do
@@ -496,7 +516,17 @@ $0: info: exclude_dirs: \`$exclude_dirs\`" >&2
     # cygwin workaround
     SHELL_FIND="${SHELL_FIND//\\//}"
 
-    IFS=$'\r\n'; for git_path in `eval \"\$SHELL_FIND\" \"\$dir\"$find_bare_flags -iname \"\$name_pttn\" -type d`; do # IFS - with trim trailing line feeds
+    local eval_find_expr
+
+    if (( no_skip_worktrees )); then
+      eval_find_expr='"$SHELL_FIND" "$dir" -type d -iname "$name_pttn"'"$find_bare_flags"
+    else
+      eval_find_expr='"$SHELL_FIND" "$dir" -type d -exec test -e "{}/.git" \;'"$find_bare_flags"' -prune -print | { while IFS=$'\''\r\n'\'' read -r path; do if [[ ! -f "$path/.git" ]]; then echo $path; fi; done }'
+    fi
+
+    #echo "$eval_find_expr"
+
+    IFS=$'\r\n'; for git_path in `eval $eval_find_expr`; do # IFS - with trim trailing line feeds
       git_path="${git_path%/.git}"
       git_pull_impl
     done

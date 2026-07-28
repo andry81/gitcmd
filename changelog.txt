@@ -1,3 +1,8 @@
+2026.07.28:
+* fixed: scripts: git_status.sh, git_pull.sh: do skip `.git` directories inside worktree directories (with `.git` file instead of `.git` directory)
+* new: scripts: git_status.sh, git_pull.sh: `--no-skip-worktrees` flag to not skip traverse a worktree directories including nested worktrees
+* changed: TODO.txt: todo update
+
 2026.07.27:
 * changed: TODO.txt: todo update
 
