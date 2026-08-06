@@ -224,6 +224,32 @@ function call()
   "$@"
 }
 
+function tkl_set_shopt_nocasematch()
+{
+  # CAUTION `OLD_SHOPT` variable must be declared and empty before the call!
+  if [[ -z "${OLD_SHOPT+x}" || -n "$OLD_SHOPT" ]]; then
+    return
+  fi
+
+  OLD_SHOPT="$(shopt -p nocasematch)" # read state before change
+
+  if [[ "$OLD_SHOPT" != 'shopt -s nocasematch' ]]; then
+    shopt -s nocasematch
+  else
+    OLD_SHOPT=''
+  fi
+}
+
+function tkl_restore_shopt()
+{
+  if [[ -n "$OLD_SHOPT" ]]; then
+    eval $OLD_SHOPT
+  fi
+  if [[ -n "${OLD_SHOPT+x}" ]]; then
+    unset OLD_SHOPT
+  fi
+}
+
 function git_filter_branch_remove_paths()
 {
   local flag="$1"
@@ -357,18 +383,12 @@ function git_filter_branch_remove_paths()
   local args=("$@")
   export path_list_cmdline=''
   local num_args=${#args[@]}
-  local old_shopt
+  local OLD_SHOPT
 
   case "$OSTYPE" in
     # case insensitive for Windows ONLY
     cygwin* | msys* | mingw*)
-      old_shopt="$(shopt -p nocasematch)" # read state before change
-
-      if [[ "$old_shopt" != 'shopt -s nocasematch' ]]; then
-        shopt -s nocasematch
-      else
-        old_shopt=''
-      fi
+      tkl_set_shopt_nocasematch
     ;;
   esac
 
@@ -403,9 +423,7 @@ function git_filter_branch_remove_paths()
     arg="$1"
   done
 
-  if [[ -n "$old_shopt" ]]; then
-    eval $old_shopt
-  fi
+  tkl_retore_shopt
 
   if (( ! has_cmdline_separator )); then
     echo "$0: error: missed cmdline separator: \`//\`" >&2

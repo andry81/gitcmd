@@ -40,6 +40,32 @@
 # Script both for execution and inclusion.
 [[ -n "$BASH" ]] || return 0 || exit 0 # exit to avoid continue if the return can not be called
 
+function tkl_set_shopt_nocasematch()
+{
+  # CAUTION `OLD_SHOPT` variable must be declared and empty before the call!
+  if [[ -z "${OLD_SHOPT+x}" || -n "$OLD_SHOPT" ]]; then
+    return
+  fi
+
+  OLD_SHOPT="$(shopt -p nocasematch)" # read state before change
+
+  if [[ "$OLD_SHOPT" != 'shopt -s nocasematch' ]]; then
+    shopt -s nocasematch
+  else
+    OLD_SHOPT=''
+  fi
+}
+
+function tkl_restore_shopt()
+{
+  if [[ -n "$OLD_SHOPT" ]]; then
+    eval $OLD_SHOPT
+  fi
+  if [[ -n "${OLD_SHOPT+x}" ]]; then
+    unset OLD_SHOPT
+  fi
+}
+
 function path_distance_rel_to()
 {
   local path0="$1"
@@ -108,12 +134,8 @@ function detect_shell_userdir_file()
       which cygpath >/dev/null 2>&1; then
     __value="${__value//\\//}"
 
-    local old_shopt="$(shopt -p nocasematch)" # read state before change
-    if [[ "$old_shopt" != 'shopt -s nocasematch' ]]; then
-      shopt -s nocasematch
-    else
-      old_shopt=''
-    fi
+    local OLD_SHOPT
+    tkl_set_shopt_nocasematch
 
     local __shell="$(realpath "$(cygpath -w "$SHELL")")"
     local __path
@@ -153,9 +175,7 @@ function detect_shell_userdir_file()
 
     __is_found=$(( __mindist < 65535 ))
 
-    if [[ -n "$old_shopt" ]]; then
-      eval $old_shopt
-    fi
+    tkl_restore_shopt
   fi
 
   if (( __is_found )); then
@@ -167,6 +187,8 @@ function detect_shell_userdir_file()
 
 function git_gen_commit_hash()
 {
+  local IFS
+
   local flag="$1"
 
   local flag_print_parents=0
@@ -214,23 +236,21 @@ function git_gen_commit_hash()
   local hashsum
   local hashvalue suffix
 
-  local IFS
-
   objtype="$(git cat-file -t "$obj")"
   hashsum="$(echo -ne "$objtype $(git cat-file -s "$obj")\0$(git cat-file -p "$obj")\n" | $hashcmd "${hashcmdline[@]}")"
 
-  IFS=$'\t ' read -r hashvalue suffix <<< "$hashsum"
+  IFS=$' \t' read -r hashvalue suffix <<< "$hashsum"
 
   echo "$hashvalue $(git rev-parse "$obj") $objtype $obj"
 
   if (( flag_print_parents )); then
     IFS=$'\r\n'; for line in `git rev-parse "$obj^@"`; do # IFS - with trim trailing line feeds
-      IFS=$'\t ' read -r parenthash suffix <<< "$line"
+      IFS=$' \t' read -r parenthash suffix <<< "$line"
 
       objtype="$(git cat-file -t "$parenthash")"
       hashsum="$(echo -ne "$objtype $(git cat-file -s "$parenthash")\0$(git cat-file -p "$parenthash")\n" | $hashcmd "${hashcmdline[@]}")"
 
-      IFS=$'\t ' read -r hashvalue suffix <<< "$hashsum"
+      IFS=$' \t' read -r hashvalue suffix <<< "$hashsum"
 
       echo "$hashvalue $parenthash $objtype"
     done
