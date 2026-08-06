@@ -1,5 +1,5 @@
 * README_EN.txt
-* 2024.07.12
+* 2026.08.02
 * gitcmd
 
 1. DESCRIPTION
@@ -187,19 +187,9 @@ https://github.com/andry81/externals
 NOTE:
   Required ONLY for tests.
 
-To run bash shell scripts (`.sh` file extension) you should copy these scripts:
+See details in `bash/README_EN.txt` in `tacklelib` project:
 
-* /_externals/tacklelib/bash/tacklelib/bash_entry
-* /_externals/tacklelib/bash/tacklelib/bash_tacklelib
-
-into the `/bin` directory of your platform.
-
-In pure Linux you have additional step to make scripts executable or readable:
-
->
-sudo chmod ug+x /bin/bash_entry
-sudo chmod o+r  /bin/bash_entry
-sudo chmod a+r  /bin/bash_tacklelib
+https://github.com/andry81/tacklelib
 
 -------------------------------------------------------------------------------
 8. PROJECT CONFIGURATION VARIABLES

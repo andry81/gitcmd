@@ -237,24 +237,6 @@ function call_accum_buf()
   call_buf "$@" >> "$accum_buf_file"
 }
 
-# call with accumulated temp buffering
-function call_temp_buf()
-{
-  local IFS=$' \t'
-  call_buf "$@" > "$temp_buf_file"
-}
-
-function accum_temp_buf()
-{
-  if (( is_buf )); then
-    echo "$(<"$temp_buf_file")" >> "$accum_buf_file"
-  else
-    echo "$(<"$temp_buf_file")"
-  fi
-
-  : > "$temp_buf_file" # trim the buffer
-}
-
 # exec with accumulated buffering
 function exec_accum_buf()
 {

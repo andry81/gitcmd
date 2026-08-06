@@ -1,3 +1,7 @@
+2026.08.03:
+* changed: scripts/git_pull.sh: code cleanup
+* changed: README_EN.txt: readme update
+
 2026.07.29:
 * changed: TODO.txt: todo update
 
