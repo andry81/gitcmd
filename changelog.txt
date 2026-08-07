@@ -1,4 +1,7 @@
 2026.08.08:
+* fixed: scripts/*.sh: wrong variable declaration detection in `tkl_set_shopt_nocasematch` function
+
+2026.08.08:
 * fixed: scripts: git_status.sh, git_pull.sh: include and exclude directories pattern traverse
 * new: scripts/git_status.sh: print not default `core` config keys by default and `--no-print-config` flag to skip it
 * new: scripts/git_status.sh: `tkl_set_shopt_nocasematch`, `tkl_restore_shopt` functions and `OLD_SHOPT` variable

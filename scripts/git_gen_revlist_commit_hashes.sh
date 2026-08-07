@@ -65,7 +65,7 @@ function call()
 function tkl_set_shopt_nocasematch()
 {
   # CAUTION `OLD_SHOPT` variable must be declared and empty before the call!
-  if [[ -z "${OLD_SHOPT+x}" || -n "$OLD_SHOPT" ]]; then
+  if ! declare -p OLD_SHOPT >/dev/null 2>&1 || [[ -n "$OLD_SHOPT" ]]; then
     return
   fi
 
