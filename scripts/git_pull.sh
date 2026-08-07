@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
 # USAGE:
-#   git_pull.sh [<flags>]  // [<dir> [<dir-name-pattern>]] // [<cmdline>]
-#   git_pull.sh [<flags>] [//] <dir> [<dir-name-pattern>]  // [<cmdline>]
+#   git_pull.sh [<flags>]  // [<dir> [<dir-path-pattern>...]] [// <cmdline>]
+#   git_pull.sh [<flags>] [//] <dir> [<dir-path-pattern>...]  [// <cmdline>]
 
 # Description:
 #   Script to pull repositories searched by the `find` pattern.
@@ -13,11 +13,13 @@
 #
 #   -w
 #   --no-skip-worktrees
-#     Don't skip traverse a worktree directories including nested worktrees.
+#     Don't skip traverse of worktree directories including nested worktrees.
+#     Has effect on the `find` utility and enables to search for `.git` as a
+#     file additionally to as a directory.
 #
 #     NOTE:
 #       By default the `find` command skips all the directories with a `.git`
-#       file (the worktree directory does contain it).
+#       file (a worktree directory does contain it).
 #
 #   -l
 #   --no-colors
@@ -65,15 +67,13 @@
 #   The directory to start search from.
 #   If empty, then `.` is used.
 
-# <dir-name-pattern>:
-#   The directory name pattern to search for.
-#   If empty, then `.git` is used.
+# <dir-path-pattern>...:
+#   The directory path pattern list to search for.
 
 # //:
 #   Separator to stop parse path list.
 #   NOTE:
-#     The last separator `//` is required to the script positional parameters
-#     from `<cmdline>`.
+#     The last separator `//` is required before <cmdline>.
 
 # <cmdline>:
 #   The rest of command line passed to `git pull` command.
@@ -93,7 +93,7 @@ function debug_echo()
   local last_error=$?
   local IFS=$' \t'
 
-  echo "$@"
+  echo "$@" >&2
 
   return $last_error
 }
@@ -282,7 +282,7 @@ function accum_buf_status()
 function tkl_set_shopt_nocasematch()
 {
   # CAUTION `OLD_SHOPT` variable must be declared and empty before the call!
-  if [[ -z "${OLD_SHOPT+x}" || -n "$OLD_SHOPT" ]]; then
+  if ! declare -p OLD_SHOPT >/dev/null 2>&1 || [[ -n "$OLD_SHOPT" ]]; then
     return
   fi
 
@@ -344,10 +344,11 @@ function detect_find()
 function git_pull()
 {
   local IFS
+
   local flag="$1"
 
   local flag_v=0
-  local no_skip_worktrees=0 # note: doesn't skip any directory with a `.git` file, not just the worktree directory only
+  local no_skip_worktrees=0 # NOTE: doesn't skip a directory with a `.git` file, not just only worktrees in a working copy
   local no_colors=0
   local exclude_dirs
 
@@ -400,16 +401,18 @@ function git_pull()
   fi
 
   local dir="$1"
-  local name_pttn="$2"
+  local dir_path_pttn_arr=("$2")
 
   shift 2
 
-  if [[ -n "$1" && "$1" != '//' ]]; then
-    echo "$0: error: missed cmdline separator: \`//\`" >&2
-    return 255
-  fi
+  while [[ -n "${1+x}" && "$1" != '//' ]]; do
+    dir_path_pttn_arr=("${dir_path_pttn_arr[@]}" "$1")
+    shift
+  done
 
-  shift
+  if [[ "$1" == '//' ]]; then
+    shift
+  fi
 
   local args=("$@")
 
@@ -424,9 +427,6 @@ function git_pull()
 
   if [[ -z "$dir" ]]; then
     dir=.
-  fi
-  if [[ -z "$name_pttn" ]]; then
-    name_pttn=.git
   fi
 
   if [[ -z "${DEFAULT_EXCLUDE_DIRS+x}" ]]; then
@@ -451,32 +451,57 @@ $0: info: exclude_dirs: \`$exclude_dirs\`" >&2
     return 255
   }
 
-  # build exclude dirs
-  local find_bare_flags
-
-  # 1. prefix all relative paths with '*/' to apply the exclude dirs at any level
-  # 2. suffix all paths with '/*' to exclude the search after the exclude directory
+  # 1. prefix all relative paths with '*/' to apply the include/exclude dirs at any level
+  # 2. suffix all paths with '/*' to include/exclude the search after the directory
   # 3. escape all `\`
+
+  # build include dir
+  local find_bare_include_filter
+  local dir_path_pttn
+
+  for (( i=0; i < ${#dir_path_pttn_arr[@]}; i++ )); do
+    dir_path_pttn="${dir_path_pttn_arr[i]}"
+
+    if [[ "$name_pttn" == '.git' || "$name_pttn" == '*' || "$name_pttn" == '.' ]]; then
+      dir_path_pttn=''
+    fi
+
+    if [[ -n "$dir_path_pttn" ]]; then
+      if [[ "${dir_path_pttn:0:1}" != "/" && "${dir_path_pttn:0:2}" != "./" && "${dir_path_pttn:0:3}" != "../" ]]; then
+        find_bare_include_filter="$find_bare_include_filter${find_bare_include_filter+ -o} -path \"*/${dir_path_pttn//\\/\\\\}\""
+      else
+        find_bare_include_filter="$find_bare_include_filter${find_bare_include_filter+ -o} -path \"${dir_path_pttn//\\/\\\\}\""
+      fi
+    fi
+  done
+
+  if [[ -n "$find_bare_include_filter" ]]; then
+    find_bare_include_filter=" \\($find_bare_include_filter \\)"
+  fi
+
+  # build exclude dirs
+  local find_bare_exclude_filter
+  local find_bare_exclude_filter2
+
   for (( i=0; i < ${#exclude_dirs_arr[@]}; i++ )); do
     if [[ "${exclude_dirs_arr[i]:0:1}" != "/" && "${exclude_dirs_arr[i]:0:2}" != "./" && "${exclude_dirs_arr[i]:0:3}" != "../" ]]; then
-      if (( no_skip_worktrees )); then
-        exclude_dirs_arr[i]="*/${exclude_dirs_arr[i]}/*"
-      else
-        exclude_dirs_arr[i]="*/${exclude_dirs_arr[i]}"
-      fi
+      exclude_dirs_arr[i]="*/${exclude_dirs_arr[i]}"
     fi
     exclude_dirs_arr="${exclude_dirs_arr//\\/\\\\}"
   done
 
   for (( i=0; i < ${#exclude_dirs_arr[@]}; i++ )); do
-    find_bare_flags="$find_bare_flags -not \\( -path \"${exclude_dirs_arr[i]}\" -prune \\)"
+    find_bare_exclude_filter="$find_bare_exclude_filter -not \\( -path \"${exclude_dirs_arr[i]}/*\" -prune \\)"
+    if (( ! no_skip_worktrees )); then
+      find_bare_exclude_filter2="$find_bare_exclude_filter2 -not \\( -path \"${exclude_dirs_arr[i]}\" -prune \\)"
+    fi
   done
 
   local is_record_printed=0
 
   function git_pull_impl()
   {
-    local IFS=$' \t'
+    local IFS
 
     if (( is_record_printed )); then
       echo -e "\n---\n"
@@ -514,30 +539,25 @@ $0: info: exclude_dirs: \`$exclude_dirs\`" >&2
     }
   }
 
-  if [[ -n "$name_pttn" ]]; then
-    detect_find
+  detect_find
 
-    # cygwin workaround
-    SHELL_FIND="${SHELL_FIND//\\//}"
+  # cygwin workaround
+  SHELL_FIND="${SHELL_FIND//\\//}"
 
-    local eval_find_expr
+  local eval_find_expr
 
-    if (( no_skip_worktrees )); then
-      eval_find_expr='"$SHELL_FIND" "$dir" -type d -iname "$name_pttn"'"$find_bare_flags"
-    else
-      eval_find_expr='"$SHELL_FIND" "$dir" -type d -exec test -e "{}/.git" \;'"$find_bare_flags"' -prune -print | { while IFS=$'\''\r\n'\'' read -r path; do if [[ ! -f "$path/.git" ]]; then echo $path; fi; done }'
-    fi
-
-    #echo "$eval_find_expr"
-
-    IFS=$'\r\n'; for git_path in `eval $eval_find_expr`; do # IFS - with trim trailing line feeds
-      git_path="${git_path%/.git}"
-      git_pull_impl
-    done
+  if (( no_skip_worktrees )); then
+    eval_find_expr='"$SHELL_FIND" "$dir" -type d -iname ".git"'"$find_bare_include_filter$find_bare_exclude_filter"
   else
-    git_path="$dir"
-    git_pull_impl
+    eval_find_expr='"$SHELL_FIND" "$dir" -type d'"$find_bare_include_filter$find_bare_exclude_filter"' -exec test -e "{}/.git" \;'"$find_bare_exclude_filter2"' -prune -print | { while IFS=$'\''\r\n'\'' read -r path; do if [[ ! -f "$path/.git" ]]; then echo $path; fi; done }'
   fi
+
+  #echo "$eval_find_expr"
+
+  IFS=$'\r\n'; for git_path in `eval $eval_find_expr`; do # IFS - with trim trailing line feeds
+    git_path="${git_path%/.git}"
+    git_pull_impl
+  done
 
   if (( is_record_printed )); then
     echo -e "\n---\n"

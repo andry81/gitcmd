@@ -1,3 +1,14 @@
+2026.08.08:
+* fixed: scripts: git_status.sh, git_pull.sh: include and exclude directories pattern traverse
+* new: scripts/git_status.sh: print not default `core` config keys by default and `--no-print-config` flag to skip it
+* new: scripts/git_status.sh: `tkl_set_shopt_nocasematch`, `tkl_restore_shopt` functions and `OLD_SHOPT` variable
+* new: docs/git/Documentation/config/core.adoc: a Git documentation file copy the `git_status.sh` script is based on
+* changed: scripts/*.sh: replace calls to `shopt -s nocasematch` and `shopt -u nocasematch` by respective `tkl_*set_shopt_nocasematch` functions
+* changed: scripts: git_status.sh, git_pull.sh: code refactor
+
+2026.08.06:
+* changed: scripts/git_status.sh: code refactor
+
 2026.08.06:
 * new: scripts/*.sh: `tkl_set_shopt_nocasematch`, `tkl_restore_shopt` functions and `OLD_SHOPT` variable
 * changed: scripts/*.sh: replace calls to `shopt -s nocasematch` and `shopt -u nocasematch` by respective `tkl_*set_shopt_nocasematch` functions

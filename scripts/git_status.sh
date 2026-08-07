@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
 # USAGE:
-#   git_status.sh [<flags>]  // [<dir> [<dir-name-pattern>]] // [<cmdline>]
-#   git_status.sh [<flags>] [//] <dir> [<dir-name-pattern>]  // [<cmdline>]
+#   git_status.sh [<flags>]  // [<dir> [<dir-path-pattern>...]] [// <cmdline>]
+#   git_status.sh [<flags>] [//] <dir> [<dir-path-pattern>...]  [// <cmdline>]
 
 # Description:
 #   Script to find repositories with uncommitted changes searched by the `find`
@@ -26,11 +26,20 @@
 #       You can mix `-v` and `-n`, in which case a verbose mode is used, but
 #       the commands has contained an empty output does not print.
 #
+#   -C
+#   --no-print-config
+#     Don't print all config keys.
+#     By default does print a not default `core` key values.
+#     Multiple values is considered not default even if all or the last value
+#     is default.
+#     Boolean values other than `true`/`false` is considered not default even
+#     if treated boolean by the Git or has a different case.
+#
 #   -W
 #   --no-worktrees
 #     Don't traverse worktrees from a working copy.
 #     Has no effect on the `find` command, by default it skips all the
-#     directories with a `.git` file (the worktree directory does contain it).
+#     directories with a `.git` file (a worktree directory does contain it).
 #
 #     NOTE:
 #       To keep look inside a worktree using the `find` command you have to
@@ -38,7 +47,9 @@
 #
 #   -w
 #   --no-skip-worktrees
-#     Don't skip traverse a worktree directories including nested worktrees.
+#     Don't skip traverse of worktree directories including nested worktrees.
+#     Has effect on the `find` utility and enables to search for `.git` as a
+#     file additionally to as a directory.
 #
 #   -S
 #   --no-stashes
@@ -59,7 +70,7 @@
 #   -N
 #   --no-checks
 #     Excludes all checks.
-#     Implies `--no-diff-checks`.
+#     Implies `--no-print-config`, `--no-diff-checks` flags.
 #
 #   -l
 #   --no-colors
@@ -68,7 +79,8 @@
 #   -s
 #   --status-only
 #     Print status only.
-#     Implies `--no-stashes`, `--no-conflicts`, `--no-checks` flags.
+#     Implies `--no-print-config`, `--no-stashes`, `--no-conflicts`,
+#     `--no-checks` flags.
 #
 #     NOTE:
 #       To exclude traverse of worktrees you have to explicitly use
@@ -116,15 +128,13 @@
 #   The directory to start search from.
 #   If empty, then `.` is used.
 
-# <dir-name-pattern>:
-#   The directory name pattern to search for.
-#   If empty, then `.git` is used.
+# <dir-path-pattern>...:
+#   The directory path pattern list to search for.
 
 # //:
 #   Separator to stop parse path list.
 #   NOTE:
-#     The last separator `//` is required to the script positional parameters
-#     from `<cmdline>`.
+#     The last separator `//` is required before <cmdline>.
 
 # <cmdline>:
 #   The rest of command line passed to `git status` command.
@@ -157,7 +167,7 @@ function debug_echo()
   local last_error=$?
   local IFS=$' \t'
 
-  echo "$@"
+  echo "$@" >&2
 
   return $last_error
 }
@@ -308,7 +318,7 @@ function call_temp_buf()
   call_buf "$@" > "$temp_buf_file"
 }
 
-function accum_temp_buf()
+function print_accum_temp_buf()
 {
   if (( is_buf )); then
     echo "$(<"$temp_buf_file")" >> "$accum_buf_file"
@@ -361,6 +371,32 @@ function accum_buf_status()
   return $last_error
 }
 
+function tkl_set_shopt_nocasematch()
+{
+  # CAUTION `OLD_SHOPT` variable must be declared and empty before the call!
+  if ! declare -p OLD_SHOPT >/dev/null 2>&1 || [[ -n "$OLD_SHOPT" ]]; then
+    return
+  fi
+
+  OLD_SHOPT="$(shopt -p nocasematch)" # read state before change
+
+  if [[ "$OLD_SHOPT" != 'shopt -s nocasematch' ]]; then
+    shopt -s nocasematch
+  else
+    OLD_SHOPT=''
+  fi
+}
+
+function tkl_restore_shopt()
+{
+  if [[ -n "$OLD_SHOPT" ]]; then
+    eval $OLD_SHOPT
+  fi
+  if [[ -n "${OLD_SHOPT+x}" ]]; then
+    unset OLD_SHOPT
+  fi
+}
+
 # Based on:
 #   https://stackoverflow.com/questions/71928010/makefile-on-windows-is-there-a-way-to-force-make-to-use-the-mingw-find-exe/76393735#76393735
 #
@@ -377,12 +413,8 @@ function detect_find()
 
   # detect `find.exe` in Windows behind `$SYSTEMROOT\System32\find.exe`
   if which where >/dev/null 2>&1; then
-    local old_shopt="$(shopt -p nocasematch)" # read state before change
-    if [[ "$old_shopt" != 'shopt -s nocasematch' ]]; then
-      shopt -s nocasematch
-    else
-      old_shopt=''
-    fi
+    local OLD_SHOPT
+    tkl_set_shopt_nocasematch
 
     local path
 
@@ -397,21 +429,140 @@ function detect_find()
       esac
     done
 
-    if [[ -n "$old_shopt" ]]; then
-      eval $old_shopt
-    fi
+    tkl_restore_shopt
+  fi
+}
+
+function path_distance_rel_to()
+{
+  local path0="$1"
+  local path1="$2"
+  local dist
+  local relpath="$(realpath -m --relative-to="$path0" "$path1")"
+
+  if [[ "$relpath" == ".." || "$relpath" == */.. ]]; then
+    relpath="${relpath}/"
+  fi
+
+  while [[ "$relpath" == ../* ]]; do
+    dist=$((dist + 1))
+    relpath="${relpath#../}"
+  done
+
+  if [[ -n "$dist" ]]; then
+    RETURN_VALUE=$dist
+    return 0
+  fi
+
+  RETURN_VALUE=''
+
+  return 1
+}
+
+# return nothing if different drives
+function path_distance()
+{
+  path_distance_rel_to "$1" "$2"
+  local dist0=$RETURN_VALUE
+
+  path_distance_rel_to "$2" "$1"
+  local dist1=$RETURN_VALUE
+
+  if [[ -n "$dist0$dist1" ]]; then
+    RETURN_VALUE=$(( dist0 + dist1 ))
+    return 0
+  fi
+
+  RETURN_VALUE=''
+
+  return 1
+}
+
+# Based on:
+#   https://stackoverflow.com/questions/71928010/makefile-on-windows-is-there-a-way-to-force-make-to-use-the-mingw-find-exe/76393735#76393735
+#
+function detect_shell_userdir_file()
+{
+  local __var="$1"
+  local __value="$2"
+  local __is_found=0
+
+  local IFS
+
+  # NOTE:
+  #   The `${path,,}` or `${path^^}` form has issues:
+  #     1. Does not handle a unicode string case conversion correctly (unicode characters translation in words).
+  #     2. Supported in Bash 4+.
+
+  # detect a shell package executable behind directories from the `PATH` variable
+  if [[ -n "${SHELL+x}" ]] && \
+      which where >/dev/null 2>&1 && \
+      which realpath >/dev/null 2>&1 && \
+      which cygpath >/dev/null 2>&1; then
+    __value="${__value//\\//}"
+
+    local OLD_SHOPT
+    tkl_set_shopt_nocasematch
+
+    local __shell="$(realpath "$(cygpath -w "$SHELL")")"
+    local __path
+    local __paths=()
+    local __dists=()
+
+    local RETURN_VALUE
+
+    IFS=$'\r\n'; for __path in `where "$__value" 2>/dev/null`; do # IFS - with trim trailing line feeds
+      __path="$(cygpath -w "$(realpath "${__path//\\//}")")"
+      __path="${__path//\\//}"
+
+      # collect paths and distances to `SHELL` variable value
+      path_distance "$__path" "$__shell"
+
+      IFS=$' \t\r\n'
+      __paths=("${__paths[@]}" "$__path")
+      __dists=("${__dists[@]}" "$RETURN_VALUE")
+
+      #echo "$RETURN_VALUE: $__path; $__shell"
+    done
+
+    local __index __mindist=65535 # max distance
+
+    # return path with existed minimal distance
+    for (( __index=0; __index < ${#__paths[@]}; __index++ )); do
+      __dist="${__dists[__index]}"
+      if [[ -n "$__dist" ]] && (( __dist < __mindist )); then
+        __path="${__paths[__index]}"
+        __mindist=$__dist
+
+        if (( ! __mindist )); then
+          break
+        fi
+      fi
+    done
+
+    __is_found=$(( __mindist < 65535 ))
+
+    tkl_restore_shopt
+  fi
+
+  if (( __is_found )); then
+    eval "$__var=\"\$__path\""
+  else
+    eval "$__var=\"\$__value\""
   fi
 }
 
 function git_status()
 {
   local IFS
+
   local flag="$1"
 
   local flag_v=0
   local no_print_empty=0
+  local no_print_config=0
   local no_worktrees=0
-  local no_skip_worktrees=0 # note: doesn't skip any directory with a `.git` file, not just the worktree directory only
+  local no_skip_worktrees=0 # NOTE: doesn't skip a directory with a `.git` file, not just only worktrees in a working copy
   local no_stashes=0
   local no_unmerged_conflicts=0
   local no_diff_checks=0
@@ -430,6 +581,9 @@ function git_status()
     # long flags
     if [[ "$flag" == '-no-print-empty' ]]; then
       no_print_empty=1
+      skip_flag=1
+    elif [[ "$flag" == '-no-print-config' ]]; then
+      no_print_config=1
       skip_flag=1
     elif [[ "$flag" == '-no-stashes' ]]; then
       no_stashes=1
@@ -472,6 +626,8 @@ function git_status()
       while [[ -n "$flag" ]]; do
         if [[ "${flag:0:1}" == 'n' ]]; then
           no_print_empty=1
+        elif [[ "${flag:0:1}" == 'C' ]]; then
+          no_print_config=1
         elif [[ "${flag:0:1}" == 'W' ]]; then
           no_worktrees=1
         elif [[ "${flag:0:1}" == 'w' ]]; then
@@ -506,16 +662,18 @@ function git_status()
   fi
 
   local dir="$1"
-  local name_pttn="$2"
+  local dir_path_pttn_arr=("$2")
 
   shift 2
 
-  if [[ -n "$1" && "$1" != '//' ]]; then
-    echo "$0: error: missed cmdline separator: \`//\`" >&2
-    return 255
-  fi
+  while [[ -n "${1+x}" && "$1" != '//' ]]; do
+    dir_path_pttn_arr=("${dir_path_pttn_arr[@]}" "$1")
+    shift
+  done
 
-  shift
+  if [[ "$1" == '//' ]]; then
+    shift
+  fi
 
   local args=("$@")
 
@@ -523,6 +681,7 @@ function git_status()
   local i
 
   if (( status_only )); then
+    no_print_config=1
     no_stashes=1
     no_conflicts=1
     no_checks=1
@@ -532,22 +691,22 @@ function git_status()
     no_unmerged_conflicts=1
   fi
   if (( no_checks )); then
+    no_print_config=1
     no_diff_checks=1
   fi
 
+  local git_bare_script_flags=(-c color.ui=no --no-pager)
+
   if (( ! no_colors )); then
-    git_bare_flags=(-c color.ui=always --no-pager)
-    git_diff_bare_flags=(--color=always)
+    local git_bare_flags=(-c color.ui=always --no-pager)
+    local git_diff_bare_flags=(--color=always)
   else
-    git_bare_flags=(-c color.ui=no --no-pager)
-    git_diff_bare_flags=(--color=never)
+    local git_bare_flags=(-c color.ui=no --no-pager)
+    local git_diff_bare_flags=(--color=never)
   fi
 
   if [[ -z "$dir" ]]; then
     dir=.
-  fi
-  if [[ -z "$name_pttn" ]]; then
-    name_pttn=.git
   fi
 
   if [[ -z "${DEFAULT_EXCLUDE_DIRS+x}" ]]; then
@@ -574,25 +733,50 @@ $0: info: exclude_dirs: \`$exclude_dirs\`" >&2
     return 255
   }
 
-  # build exclude dirs
-  local find_bare_flags
-
-  # 1. prefix all relative paths with '*/' to apply the exclude dirs at any level
-  # 2. suffix all paths with '/*' to exclude the search after the exclude directory
+  # 1. prefix all relative paths with '*/' to apply the include/exclude dirs at any level
+  # 2. suffix all paths with '/*' to include/exclude the search after the directory
   # 3. escape all `\`
+
+  # build include dir
+  local find_bare_include_filter
+  local dir_path_pttn
+
+  for (( i=0; i < ${#dir_path_pttn_arr[@]}; i++ )); do
+    dir_path_pttn="${dir_path_pttn_arr[i]}"
+
+    if [[ "$name_pttn" == '.git' || "$name_pttn" == '*' || "$name_pttn" == '.' ]]; then
+      dir_path_pttn=''
+    fi
+
+    if [[ -n "$dir_path_pttn" ]]; then
+      if [[ "${dir_path_pttn:0:1}" != "/" && "${dir_path_pttn:0:2}" != "./" && "${dir_path_pttn:0:3}" != "../" ]]; then
+        find_bare_include_filter="$find_bare_include_filter${find_bare_include_filter+ -o} -path \"*/${dir_path_pttn//\\/\\\\}\""
+      else
+        find_bare_include_filter="$find_bare_include_filter${find_bare_include_filter+ -o} -path \"${dir_path_pttn//\\/\\\\}\""
+      fi
+    fi
+  done
+
+  if [[ -n "$find_bare_include_filter" ]]; then
+    find_bare_include_filter=" \\($find_bare_include_filter \\)"
+  fi
+
+  # build exclude dirs
+  local find_bare_exclude_filter
+  local find_bare_exclude_filter2
+
   for (( i=0; i < ${#exclude_dirs_arr[@]}; i++ )); do
     if [[ "${exclude_dirs_arr[i]:0:1}" != "/" && "${exclude_dirs_arr[i]:0:2}" != "./" && "${exclude_dirs_arr[i]:0:3}" != "../" ]]; then
-      if (( no_skip_worktrees )); then
-        exclude_dirs_arr[i]="*/${exclude_dirs_arr[i]}/*"
-      else
-        exclude_dirs_arr[i]="*/${exclude_dirs_arr[i]}"
-      fi
+      exclude_dirs_arr[i]="*/${exclude_dirs_arr[i]}"
     fi
     exclude_dirs_arr="${exclude_dirs_arr//\\/\\\\}"
   done
 
   for (( i=0; i < ${#exclude_dirs_arr[@]}; i++ )); do
-    find_bare_flags="$find_bare_flags -not \\( -path \"${exclude_dirs_arr[i]}\" -prune \\)"
+    find_bare_exclude_filter="$find_bare_exclude_filter -not \\( -path \"${exclude_dirs_arr[i]}/*\" -prune \\)"
+    if (( ! no_skip_worktrees )); then
+      find_bare_exclude_filter2="$find_bare_exclude_filter2 -not \\( -path \"${exclude_dirs_arr[i]}\" -prune \\)"
+    fi
   done
 
   local is_buf=0
@@ -634,6 +818,7 @@ $0: info: exclude_dirs: \`$exclude_dirs\`" >&2
   function has_worktrees()
   {
     local IFS
+
     local git_worktree_path _
     local i=0
 
@@ -650,6 +835,7 @@ $0: info: exclude_dirs: \`$exclude_dirs\`" >&2
   function git_worktree_recurse_impl()
   {
     local IFS
+
     local git_worktree_path _
     local i=0
 
@@ -679,7 +865,7 @@ $0: info: exclude_dirs: \`$exclude_dirs\`" >&2
 
   function git_status_impl()
   {
-    local IFS=$' \t'
+    local IFS
 
     if (( is_record_printed )); then
       echo -e "\n---\n"
@@ -726,6 +912,15 @@ $0: info: exclude_dirs: \`$exclude_dirs\`" >&2
 
       :
     fi && {
+      # print not default configuration
+      if (( ! no_print_config )); then
+        local git_config_type
+
+        for git_config_type in local; do
+          print_not_default_git_config_key_value_impl
+        done
+      fi
+
       # request, save and print worktrees
       if (( ! no_worktrees && ! git_worktree_recurse )); then
         if call_temp_buf git ${git_bare_flags[*]} worktree list; then
@@ -739,7 +934,7 @@ $0: info: exclude_dirs: \`$exclude_dirs\`" >&2
             ! : # instead of `false` call, faster
           fi && {
             git_worktree_list=$(<"$temp_buf_file")
-            accum_temp_buf
+            print_accum_temp_buf
             accum_buf_status
           }
         fi
@@ -793,30 +988,255 @@ $0: info: exclude_dirs: \`$exclude_dirs\`" >&2
     fi
   }
 
-  if [[ -n "$name_pttn" ]]; then
-    detect_find
+  function git_config_globals_init_and_check_impl()
+  {
+    local IFS
 
-    # cygwin workaround
-    SHELL_FIND="${SHELL_FIND//\\//}"
+    # details: https://github.com/git/git/tree/HEAD/Documentation/config/core.adoc
+    # implemented on: docs/git/Documentation/config/core.adoc
 
-    local eval_find_expr
+    # CAUTION:
+    #   All keys with the same name must follow in a single sequence.
 
-    if (( no_skip_worktrees )); then
-      eval_find_expr='"$SHELL_FIND" "$dir" -type d -iname "$name_pttn"'"$find_bare_flags"
-    else
-      eval_find_expr='"$SHELL_FIND" "$dir" -type d -exec test -e "{}/.git" \;'"$find_bare_flags"' -prune -print | { while IFS=$'\''\r\n'\'' read -r path; do if [[ ! -f "$path/.git" ]]; then echo $path; fi; done }'
+    # CAUTION:
+    #   The `core.ignoreCase` does print in lower case in Windows.
+
+    # Keys considered default if not set or set to <default_value>.
+    # Multiple values is considered not default even if all or the last value is default.
+    # Boolean values other than `true`/`false` is considered not default even if treated boolean by the Git or has a different case.
+    # format: [<os_type>:]<key>=<default_value>
+    known_config_core_default_keys=(
+      # used to be `false` due to MSys layer
+      WIN:fileMode=false
+      fileMode=true hideDotFiles=dotGitOnly WIN:ignoreCase=true ignoreCase=false
+      precomposeUnicode=false MAC:protectHFS=true protectHFS=false
+      WIN:protectNTFS=true protectNTFS=false trustctime=true splitIndex=false
+      untrackedCache=keep checkStat=default quotePath=true eol=native
+      safecrlf=warn autocrlf=false checkRoundtripEncoding=SHIFT-JIS
+      WIN:symlinks=false symlinks=true ignoreStat=false preferSymlinkRefs=symref
+      lockfilePid=false logAllRefUpdates=true
+      # details: https://www.kernel.org/pub/software/scm/git/docs/gitrepository-layout.html#_git_repository_format_versions
+      repositoryFormatVersion=0
+      sharedRepository=false warnAmbiguousRefs=true
+      commentChar=\# commentString=// filesRefLockTimeout=100
+      packedRefsTimeout=1000 configLockTimeout=1000 preloadIndex=true
+      commitGraph=true useReplaceRefs=true multiPackIndex=true
+    )
+
+    # Keys considered default if not exist (an empty value is considered as not default).
+    # format: [<os_type>:]<key>
+    known_config_core_default_empty_keys=(
+      fsmonitor fsmonitorHookVersion gitProxy sshCommand alternateRefsCommand
+      alternateRefsPrefixes worktree compression looseCompression
+      packedGitWindowSize packedGitLimit deltaBaseCacheLimit bigFileThreshold
+      excludesFile askPass attributesFile hooksPath pager whitespace
+      fsync fsyncMethod fsyncObjectFiles unsetenvvars createObject notesRef
+      sparseCheckout sparseCheckoutCone abbrev maxTreeDepth
+    )
+
+    # detect sort utility
+    detect_shell_userdir_file sortcmd "sort"
+
+    if [[ "$sortcmd" != 'sort' ]]; then
+      sortcmd="'${sortcmd//\'/\'\\\'\'}'"
     fi
 
-    #echo "$eval_find_expr"
+    function print_not_default_git_config_key_value_impl()
+    {
+      local IFS
 
-    IFS=$'\r\n'; for git_path in `eval $eval_find_expr`; do # IFS - with trim trailing line feeds
-      git_path="${git_path%/.git}"
-      git_status_impl
+      local key_os_type key value
+      local cfg_key cfg_value last_known_cfg_key last_filtered_cfg
+      local known_cfg last_known_applied_key
+      local buf
+      local set_shopt_nocasematch
+
+      local eval_git_config_system_cmd="git ${git_bare_script_flags[*]} config --$git_config_type --list | $sortcmd -s -t= -k1,1d"
+
+      if (( ! no_color )); then
+        exec_auto_buf echo -en "\e[0;33m"
+      fi
+
+      exec_auto_buf echo ">$eval_git_config_system_cmd"
+
+      if (( ! no_color )); then
+        exec_auto_buf echo -en "\e[0m"
+      fi
+
+      if (( ! is_buf )); then
+        is_record_printed=1
+      fi
+
+      local OLD_SHOPT
+
+      # always compare case insensitive in Windows
+      if [[ "$os_type" == "WIN" ]]; then
+        tkl_set_shopt_nocasematch
+      fi
+
+      while IFS=$'\r\n=' read cfg_key cfg_value; do
+        # print duplicated known config keys unconditionally
+        if [[ "$last_known_cfg_key" == "$cfg_key" ]]; then
+          #echo "=$cfg_key=$cfg_value|$value|"
+          buf="$buf$last_filtered_cfg$cfg_key=$cfg_value"$'\n'
+          last_filtered_cfg=''
+          continue
+        fi
+
+        last_known_cfg_key=''
+        last_known_applied_key=''
+        last_filtered_cfg=''
+
+        IFS=$' \t'; for known_cfg in "${known_config_core_default_keys[@]}"; do
+          IFS='=' read key value <<< "$known_cfg"
+          IFS=':' read key_os_type key <<< "$key"
+
+          if [[ -z "$key" ]]; then
+            key="$key_os_type"
+            key_os_type=''
+          fi
+
+          if [[ "$last_known_applied_key" == "$key" ]]; then
+            break
+          fi
+
+          if [[ "$cfg_key" == "core.$key" ]]; then
+            last_known_cfg_key="$cfg_key"
+
+            if [[ -z "$key_os_type" || "$key_os_type" == "$os_type" ]]; then
+              last_known_applied_key="$key"
+
+              if [[ -z "$cfg_value" ]]; then
+                #echo "=$cfg_key="
+                buf="$buf$cfg_key=$cfg_value"$'\n'
+              else
+                # restore case sensitivity to compare key values
+                if [[ "$os_type" == "WIN" ]]; then
+                  tkl_restore_shopt
+                  set_shopt_nocasematch=1
+                else
+                  set_shopt_nocasematch=0
+                fi
+
+                if [[ "$cfg_value" != "$value" ]]; then
+                  #echo "=$cfg_key=$cfg_value|$value|"
+                  buf="$buf$cfg_key=$cfg_value"$'\n'
+                else
+                  last_filtered_cfg="$cfg_key=$cfg_value"$'\n' # would be printed if known cfg key is duplicated
+                fi
+
+                if (( set_shopt_nocasematch )); then
+                  local OLD_SHOPT
+                  tkl_set_shopt_nocasematch
+                fi
+              fi
+
+              break
+            fi
+          fi
+        done
+
+        if [[ -n "$last_known_cfg_key" ]]; then
+          continue
+        fi
+
+        IFS=$' \t'; for known_cfg in "${known_config_core_default_empty_keys[@]}"; do
+          IFS='=' read key value <<< "$known_cfg"
+          IFS=':' read key_os_type key <<< "$key"
+
+          if [[ -z "$key" ]]; then
+            key="$key_os_type"
+            key_os_type=''
+          fi
+
+          if [[ "$last_known_applied_key" == "$key" ]]; then
+            break
+          fi
+
+          if [[ "$cfg_key" == "core.$key" ]]; then
+            last_known_cfg_key="$cfg_key"
+
+            if [[ -z "$key_os_type" || "$key_os_type" == "$os_type" ]]; then
+              last_known_applied_key="$key"
+
+              #echo "=$cfg_key=$cfg_value|$value|"
+              buf="$buf$cfg_key=$cfg_value"$'\n'
+            fi
+          fi
+        done
+      done <<< "$(eval $eval_git_config_system_cmd)"
+
+      tkl_restore_shopt
+
+      # if not empty
+      if [[ -n "$buf" ]]; then
+        exec_auto_buf echo -n "$buf"
+        accum_buf_status
+      fi
+
+      if (( is_buf )); then
+        if (( has_accum_buf )); then
+          #echo ===
+          echo "$(<"$accum_buf_file")"
+          has_accum_buf=0
+          is_record_printed=1
+        fi
+
+        : > "$accum_buf_file" # trim the buffer
+      fi
+    }
+
+    local git_config_type
+
+    # print not default configuration
+
+    for git_config_type in system global; do
+      print_not_default_git_config_key_value_impl
     done
-  else
-    git_path="$dir"
-    git_status_impl
+  }
+
+  local OLD_SHOPT
+  tkl_set_shopt_nocasematch
+
+  local os_type
+
+  # detect `os_type` as: UNIX|WIN|MAC
+  case "$(uname -s)" in
+    Linux*)   os_type=UNIX ;;
+    Darwin*)  os_type=MAC ;;
+    MINGW*)   os_type=WIN ;;
+    MSYS*)    os_type=WIN ;;
+    Cygwin*)  os_type=WIN ;;
+    *)        os_type=UNIX ;; # unknown treated as UNIX
+  esac
+
+  tkl_restore_shopt
+
+  if (( ! no_print_config )); then
+    local known_config_core_default_keys known_config_core_default_empty_keys
+    local sortcmd
+    git_config_globals_init_and_check_impl
   fi
+
+  detect_find
+
+  # cygwin workaround
+  SHELL_FIND="${SHELL_FIND//\\//}"
+
+  local eval_find_expr
+
+  if (( no_skip_worktrees )); then
+    eval_find_expr='"$SHELL_FIND" "$dir" -type d -iname ".git"'"$find_bare_include_filter$find_bare_exclude_filter"
+  else
+    eval_find_expr='"$SHELL_FIND" "$dir" -type d'"$find_bare_include_filter$find_bare_exclude_filter"' -exec test -e "{}/.git" \;'"$find_bare_exclude_filter2"' -prune -print | { while IFS=$'\''\r\n'\'' read -r path; do if [[ ! -f "$path/.git" ]]; then echo $path; fi; done }'
+  fi
+
+  #echo "$eval_find_expr"
+
+  IFS=$'\r\n'; for git_path in `eval $eval_find_expr`; do # IFS - with trim trailing line feeds
+    git_path="${git_path%/.git}"
+    git_status_impl
+  done
 
   if (( is_record_printed )); then
     echo -e "\n---\n"
