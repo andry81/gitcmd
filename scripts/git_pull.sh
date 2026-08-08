@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 
 # USAGE:
-#   git_pull.sh [<flags>]  // [<dir> [<dir-path-pattern>...]] [// <cmdline>]
-#   git_pull.sh [<flags>] [//] <dir> [<dir-path-pattern>...]  [// <cmdline>]
+#   git_pull.sh [<flags>] [//] [<dir> [<dir-path-pattern>...]] [// <cmdline>]
 
 # Description:
 #   Script to pull repositories searched by the `find` pattern.
@@ -69,6 +68,8 @@
 
 # <dir-path-pattern>...:
 #   The directory path pattern list to search for.
+#   The empty string, `.` and `*` has the same meaning and does search for all
+#   repositories.
 
 # //:
 #   Separator to stop parse path list.
@@ -77,6 +78,7 @@
 
 # <cmdline>:
 #   The rest of command line passed to `git pull` command.
+#   If empty, then `-s` is used.
 
 # Examples:
 #   >
@@ -123,7 +125,7 @@ function call_buf()
   local last_error=0
 
   case "$1" in
-    echo)
+    echo | realpath | cygpath)
       # do not skip
       ;;
     *)
@@ -187,7 +189,7 @@ function exec_buf()
   local last_error=0
 
   case "$1" in
-    echo)
+    echo | realpath | cygpath)
       # do not skip
       ;;
     *)
@@ -310,7 +312,7 @@ function path_distance_rel_to()
   local path0="$1"
   local path1="$2"
   local dist
-  local relpath="$(realpath -m --relative-to="$path0" "$path1")"
+  local relpath="$(realpath -m --relative-to="$path0" -- "$path1")"
 
   if [[ "$relpath" == ".." || "$relpath" == */.. ]]; then
     relpath="${relpath}/"
@@ -376,7 +378,7 @@ function detect_shell_userdir_file()
     local OLD_SHOPT
     tkl_set_shopt_nocasematch
 
-    local __shell="$(realpath "$(cygpath -w "$SHELL")")"
+    local __shell="$(realpath -- "$(cygpath -w -- "$SHELL")")"
     local __path
     local __paths=()
     local __dists=()
@@ -384,7 +386,7 @@ function detect_shell_userdir_file()
     local RETURN_VALUE
 
     IFS=$'\r\n'; for __path in `where "$__value" 2>/dev/null`; do # IFS - with trim trailing line feeds
-      __path="$(cygpath -w "$(realpath "${__path//\\//}")")"
+      __path="$(cygpath -w -- "$(realpath -- "${__path//\\//}")")"
       __path="${__path//\\//}"
 
       # collect paths and distances to `SHELL` variable value
@@ -483,10 +485,11 @@ function git_pull()
     shift
   fi
 
-  local dir="$1"
-  local dir_path_pttn_arr=("$2")
+  local dir="${1:-.}"
 
-  shift 2
+  shift
+
+  local dir_path_pttn_arr=()
 
   while [[ -n "${1+x}" && "$1" != '//' ]]; do
     dir_path_pttn_arr=("${dir_path_pttn_arr[@]}" "$1")
@@ -506,10 +509,6 @@ function git_pull()
     local git_bare_flags=(-c color.ui=always --no-pager)
   else
     local git_bare_flags=(-c color.ui=no --no-pager)
-  fi
-
-  if [[ -z "$dir" ]]; then
-    dir=.
   fi
 
   if [[ -z "${DEFAULT_EXCLUDE_DIRS+x}" ]]; then
@@ -545,12 +544,15 @@ $0: info: exclude_dirs: \`$exclude_dirs\`" >&2
   for (( i=0; i < ${#dir_path_pttn_arr[@]}; i++ )); do
     dir_path_pttn="${dir_path_pttn_arr[i]}"
 
-    if [[ "$name_pttn" == '.git' || "$name_pttn" == '*' || "$name_pttn" == '.' ]]; then
+    if [[ "$dir_path_pttn" == '*' || "$dir_path_pttn" == '.' ]]; then
       dir_path_pttn=''
     fi
 
     if [[ -n "$dir_path_pttn" ]]; then
-      if [[ "${dir_path_pttn:0:1}" != "/" && "${dir_path_pttn:0:2}" != "./" && "${dir_path_pttn:0:3}" != "../" ]]; then
+      # convert to backend path
+      dir_path_pttn="$(cygpath -u -- "$dir_path_pttn")"
+
+      if [[ "${dir_path_pttn:0:1}" != '/' && "${dir_path_pttn:0:2}" != './' && "${dir_path_pttn:0:3}" != '../' ]]; then
         find_bare_include_filter="$find_bare_include_filter${find_bare_include_filter+ -o} -path \"*/${dir_path_pttn//\\/\\\\}\""
       else
         find_bare_include_filter="$find_bare_include_filter${find_bare_include_filter+ -o} -path \"${dir_path_pttn//\\/\\\\}\""
@@ -567,6 +569,9 @@ $0: info: exclude_dirs: \`$exclude_dirs\`" >&2
   local find_bare_exclude_filter2
 
   for (( i=0; i < ${#exclude_dirs_arr[@]}; i++ )); do
+    # convert to backend path
+    exclude_dirs_arr[i]="$(cygpath -u -- "${exclude_dirs_arr[i]}")"
+
     if [[ "${exclude_dirs_arr[i]:0:1}" != "/" && "${exclude_dirs_arr[i]:0:2}" != "./" && "${exclude_dirs_arr[i]:0:3}" != "../" ]]; then
       exclude_dirs_arr[i]="*/${exclude_dirs_arr[i]}"
     fi
@@ -596,7 +601,7 @@ $0: info: exclude_dirs: \`$exclude_dirs\`" >&2
       exec_auto_buf echo -en "\e[0;32m"
     fi
 
-    exec_auto_buf realpath "$git_path"
+    exec_auto_buf realpath -- "$git_path"
 
     if (( ! no_color )); then
       exec_auto_buf echo -en "\e[0m"

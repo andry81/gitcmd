@@ -26,7 +26,7 @@ function git_log()
 
   local last_error=0
 
-  outfile=$(realpath $outfile)
+  outfile="$(realpath -- "$outfile")"
 
   pushd "$dir" > /dev/null && {
     git log --format='%B%-C()%n' > "$outfile"

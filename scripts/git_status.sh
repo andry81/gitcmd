@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 
 # USAGE:
-#   git_status.sh [<flags>]  // [<dir> [<dir-path-pattern>...]] [// <cmdline>]
-#   git_status.sh [<flags>] [//] <dir> [<dir-path-pattern>...]  [// <cmdline>]
+#   git_status.sh [<flags>] [//] [<dir> [<dir-path-pattern>...]] [// <cmdline>]
 
 # Description:
 #   Script to find repositories with uncommitted changes searched by the `find`
@@ -67,10 +66,25 @@
 #     Excludes all conflicts.
 #     Implies `--no-unmerged-conflicts`.
 #
+#   -h
+#   --no-log-ahead-behind
+#     Don't check unpushed (ahead) and unpulled (behind) commits in local
+#     branches for all remotes using `git log` command.
+#     By default traverse all remotes including those not yet pushed ignoring
+#     upstream configuration.
+#     Counts commits for each local branch and prints number of commits which
+#     are ahead and behind to a remote counterpart.
+#     Use `git log --oneline` to print ahead and behind commit details.
+#     By default the output length is limited to 10 commits.
+#
+#   --no-warn-missed-branch-refs
+#     Don't warn of missed branch references on the local or remote.
+#
 #   -N
 #   --no-checks
 #     Excludes all checks.
-#     Implies `--no-print-config`, `--no-diff-checks` flags.
+#     Implies `--no-print-config`, `--no-diff-checks`, `--no-log-ahead-behind`
+#     flags.
 #
 #   -l
 #   --no-colors
@@ -79,8 +93,8 @@
 #   -s
 #   --status-only
 #     Print status only.
-#     Implies `--no-print-config`, `--no-stashes`, `--no-conflicts`,
-#     `--no-checks` flags.
+#     Implies `--no-print-config`, `--no-stashes`, `--no-log-ahead-behind`,
+#     `--no-conflicts`, `--no-checks` flags.
 #
 #     NOTE:
 #       To exclude traverse of worktrees you have to explicitly use
@@ -130,6 +144,8 @@
 
 # <dir-path-pattern>...:
 #   The directory path pattern list to search for.
+#   The empty string, `.` and `*` has the same meaning and does search for all
+#   repositories.
 
 # //:
 #   Separator to stop parse path list.
@@ -197,7 +213,7 @@ function call_buf()
   local last_error=0
 
   case "$1" in
-    echo)
+    echo | realpath | cygpath)
       # do not skip
       ;;
     *)
@@ -261,7 +277,7 @@ function exec_buf()
   local last_error=0
 
   case "$1" in
-    echo)
+    echo | realpath | cygpath)
       # do not skip
       ;;
     *)
@@ -402,7 +418,7 @@ function path_distance_rel_to()
   local path0="$1"
   local path1="$2"
   local dist
-  local relpath="$(realpath -m --relative-to="$path0" "$path1")"
+  local relpath="$(realpath -m --relative-to="$path0" -- "$path1")"
 
   if [[ "$relpath" == ".." || "$relpath" == */.. ]]; then
     relpath="${relpath}/"
@@ -468,7 +484,7 @@ function detect_shell_userdir_file()
     local OLD_SHOPT
     tkl_set_shopt_nocasematch
 
-    local __shell="$(realpath "$(cygpath -w "$SHELL")")"
+    local __shell="$(realpath -- "$(cygpath -w -- "$SHELL")")"
     local __path
     local __paths=()
     local __dists=()
@@ -476,7 +492,7 @@ function detect_shell_userdir_file()
     local RETURN_VALUE
 
     IFS=$'\r\n'; for __path in `where "$__value" 2>/dev/null`; do # IFS - with trim trailing line feeds
-      __path="$(cygpath -w "$(realpath "${__path//\\//}")")"
+      __path="$(cygpath -w -- "$(realpath -- "${__path//\\//}")")"
       __path="${__path//\\//}"
 
       # collect paths and distances to `SHELL` variable value
@@ -531,6 +547,8 @@ function git_status()
   local no_unmerged_conflicts=0
   local no_diff_checks=0
   local no_conflicts=0
+  local no_log_ahead_behind=0
+  local no_warn_missed_branch_refs=0
   local no_checks=0
   local no_colors=0
   local status_only=0
@@ -567,6 +585,12 @@ function git_status()
     elif [[ "$flag" == '-no-conflicts' ]]; then
       no_conflicts=1
       skip_flag=1
+    elif [[ "$flag" == '-no-log-ahead-behind' ]]; then
+      no_log_ahead_behind=1
+      skip_flag=1
+    elif [[ "$flag" == '-no-warn-missed-branch-refs' ]]; then
+      no_warn_missed_branch_refs=1
+      skip_flag=1
     elif [[ "$flag" == '-no-checks' ]]; then
       no_checks=1
       skip_flag=1
@@ -600,6 +624,8 @@ function git_status()
           no_stashes=1
         elif [[ "${flag:0:1}" == 'L' ]]; then
           no_conflicts=1
+        elif [[ "${flag:0:1}" == 'h' ]]; then
+          no_log_ahead_behind=1
         elif [[ "${flag:0:1}" == 'N' ]]; then
           no_checks=1
         elif [[ "${flag:0:1}" == 'l' ]]; then
@@ -625,10 +651,11 @@ function git_status()
     shift
   fi
 
-  local dir="$1"
-  local dir_path_pttn_arr=("$2")
+  local dir="${1:-.}"
 
-  shift 2
+  shift
+
+  local dir_path_pttn_arr=()
 
   while [[ -n "${1+x}" && "$1" != '//' ]]; do
     dir_path_pttn_arr=("${dir_path_pttn_arr[@]}" "$1")
@@ -669,10 +696,6 @@ function git_status()
     local git_diff_bare_flags=(--color=never)
   fi
 
-  if [[ -z "$dir" ]]; then
-    dir=.
-  fi
-
   if [[ -z "${DEFAULT_EXCLUDE_DIRS+x}" ]]; then
     local DEFAULT_EXCLUDE_DIRS='"~*" ".git" ".svn" ".hg" ".log" ".temp" "_ext" "_externals" "ext" "externals" "_out" "out" "Output" "*.backup" "*.bak" "*.old" ".vs" "__pycache__"'
   fi
@@ -708,12 +731,15 @@ $0: info: exclude_dirs: \`$exclude_dirs\`" >&2
   for (( i=0; i < ${#dir_path_pttn_arr[@]}; i++ )); do
     dir_path_pttn="${dir_path_pttn_arr[i]}"
 
-    if [[ "$name_pttn" == '.git' || "$name_pttn" == '*' || "$name_pttn" == '.' ]]; then
+    if [[ "$dir_path_pttn" == '*' || "$dir_path_pttn" == '.' ]]; then
       dir_path_pttn=''
     fi
 
     if [[ -n "$dir_path_pttn" ]]; then
-      if [[ "${dir_path_pttn:0:1}" != "/" && "${dir_path_pttn:0:2}" != "./" && "${dir_path_pttn:0:3}" != "../" ]]; then
+      # convert to backend path
+      dir_path_pttn="$(cygpath -u -- "$dir_path_pttn")"
+
+      if [[ "${dir_path_pttn:0:1}" != '/' && "${dir_path_pttn:0:2}" != './' && "${dir_path_pttn:0:3}" != '../' ]]; then
         find_bare_include_filter="$find_bare_include_filter${find_bare_include_filter+ -o} -path \"*/${dir_path_pttn//\\/\\\\}\""
       else
         find_bare_include_filter="$find_bare_include_filter${find_bare_include_filter+ -o} -path \"${dir_path_pttn//\\/\\\\}\""
@@ -730,6 +756,9 @@ $0: info: exclude_dirs: \`$exclude_dirs\`" >&2
   local find_bare_exclude_filter2
 
   for (( i=0; i < ${#exclude_dirs_arr[@]}; i++ )); do
+    # convert to backend path
+    exclude_dirs_arr[i]="$(cygpath -u -- "${exclude_dirs_arr[i]}")"
+
     if [[ "${exclude_dirs_arr[i]:0:1}" != "/" && "${exclude_dirs_arr[i]:0:2}" != "./" && "${exclude_dirs_arr[i]:0:3}" != "../" ]]; then
       exclude_dirs_arr[i]="*/${exclude_dirs_arr[i]}"
     fi
@@ -827,6 +856,199 @@ $0: info: exclude_dirs: \`$exclude_dirs\`" >&2
     done <<< "$git_worktree_list"
   }
 
+  function git_log_ahead_behind_impl()
+  {
+    local IFS
+
+    local remote remote_url branch
+    local i j buf err_buf
+    local eval_git_log_ahead_behind_cmd
+    local revrange has_remote_branch_ref has_remote_branch
+    local local_branch_arr=()
+    local remote_arr=() remote_url_arr=()
+    local has_local_branch has_local_branch_arr=()
+    local is_remote_url_and_branch_printed print_remote_url_and_branch_spacer=0
+    local print_git_log_ahead_behind_header is_git_log_ahead_behind_header_buf_printed
+
+    function git_log_print_ahead_behind_header_impl()
+    {
+      print_git_log_ahead_behind_header=0
+      is_git_log_ahead_behind_header_buf_printed=0
+
+      if (( ! no_color )); then
+        exec_auto_buf echo -en "\e[1;37m"
+      fi
+
+      exec_auto_buf echo -e "\nLog ahead/behind commits:\n"
+
+      if (( ! no_color )); then
+        exec_auto_buf echo -en "\e[0m"
+      fi
+
+      if (( ! is_buf )); then
+        is_record_printed=1
+      fi
+    }
+
+    git_log_print_ahead_behind_header_impl
+
+    while IFS=$'\r\n' read remote; do
+      remote_arr=("${remote_arr[@]}" "$remote")
+
+      IFS=$'\r\n' read remote_url <<< "$(git remote get-url "$remote")"
+      remote_url_arr=("${remote_url_arr[@]}" "$remote_url")
+    done < <(git remote)
+
+    while IFS=$'\r\n' read branch; do
+      local_branch_arr=("${local_branch_arr[@]}" "$branch")
+
+      git show-ref -q --verify "refs/heads/$branch"
+      has_local_branch_arr=( "${has_local_branch_arr[@]}" $(( ! $? )) )
+    done < <(git for-each-ref --format="%(refname:short)" refs/heads)
+
+    for (( i=0; i < ${#remote_arr[@]}; i++ )); do
+      remote="${remote_arr[i]}"
+      remote_url="${remote_url_arr[i]}"
+
+      for (( j=0; j < ${#local_branch_arr[@]}; j++ )); do
+        branch="${local_branch_arr[j]}"
+        has_local_branch=${has_local_branch_arr[j]}
+
+        has_remote_branch_ref=''
+        has_remote_branch=''
+
+        is_remote_url_and_branch_printed=0
+
+        for revrange in "refs/remotes/$remote/$branch..refs/heads/$branch" "refs/heads/$branch..refs/remotes/$remote/$branch"; do
+          eval_git_log_ahead_behind_cmd="git ${git_bare_flags[*]} log -n 10 --graph --oneline --decorate $revrange"
+
+          if (( print_git_log_ahead_behind_header && ! is_git_log_ahead_behind_header_buf_printed )); then
+            git_log_print_ahead_behind_header_impl
+          fi
+
+          if (( ! is_remote_url_and_branch_printed )); then
+            is_remote_url_and_branch_printed=1
+
+            if (( print_remote_url_and_branch_spacer )); then
+              exec_auto_buf echo
+            fi
+
+            print_remote_url_and_branch_spacer=1
+
+            if (( ! no_color )); then
+              exec_auto_buf echo -en "\e[1;36m"
+            fi
+
+            exec_auto_buf echo -n "$remote"
+
+            if (( ! no_color )); then
+              exec_auto_buf echo -en "\e[0m"
+            fi
+
+            exec_auto_buf echo -n " -> "
+
+            if (( ! no_color )); then
+              exec_auto_buf echo -en "\e[1;36m"
+            fi
+
+            exec_auto_buf echo -n "$remote_url"
+
+            if (( ! no_color )); then
+              exec_auto_buf echo -en "\e[0m"
+            fi
+
+            exec_auto_buf echo -n "@"
+
+            if (( ! no_color )); then
+              exec_auto_buf echo -en "\e[1;32m"
+            fi
+
+            exec_auto_buf echo "$branch"
+
+            if (( ! no_color )); then
+              exec_auto_buf echo -en "\e[0m"
+            fi
+
+            if (( ! is_buf )); then
+              is_record_printed=1
+            fi
+          fi
+
+          if (( ! no_color )); then
+            exec_auto_buf echo -en "\e[0;33m"
+          fi
+
+          exec_auto_buf echo ">$eval_git_log_ahead_behind_cmd"
+
+          if (( ! no_color )); then
+            exec_auto_buf echo -en "\e[0m"
+          fi
+
+          if (( ! is_buf )); then
+            is_record_printed=1
+          fi
+
+          if [[ -z "$has_remote_branch_ref" ]]; then
+            git show-ref -q --verify "refs/remotes/$remote/$branch"; has_remote_branch_ref=$(( ! $? ))
+          fi
+
+          if [[ -z "$has_remote_branch" ]]; then
+            err_buf="$(git ls-remote -q --exit-code --refs "$remote" "refs/heads/$branch" 2>&1 >/dev/null)"; has_remote_branch=$(( ! $? ))
+          else
+            err_buf=''
+          fi
+
+          if (( has_local_branch && has_remote_branch_ref && has_remote_branch )); then
+            buf="$(eval $eval_git_log_ahead_behind_cmd)"
+          elif (( ! no_warn_missed_branch_refs )); then
+            buf=' '
+            if (( ! has_local_branch )); then
+              buf="$buf[NO LOCAL BRANCH]"
+            fi
+            if (( ! has_remote_branch_ref )); then
+              buf="$buf[NO REMOTE BRANCH REF]"
+            fi
+            if (( ! has_remote_branch )); then
+              buf="$buf[NO REMOTE BRANCH]"
+            fi
+            buf="$buf"$'\n'
+          else
+            buf=''
+          fi
+
+          # if not empty
+          if [[ -n "$buf" ]]; then
+            exec_auto_buf echo "$buf"
+            accum_buf_status
+          fi
+
+          if [[ -n "$err_buf" ]]; then
+            exec_auto_buf echo -n "$err_buf"
+            accum_buf_status
+          fi
+
+          if (( is_buf )); then
+            if (( has_accum_buf )); then
+              #echo ===
+              echo "$(<"$accum_buf_file")"
+              has_accum_buf=0
+              is_record_printed=1
+              is_git_log_ahead_behind_header_buf_printed=1
+            else
+              is_remote_url_and_branch_printed=0
+            fi
+
+            : > "$accum_buf_file" # trim the buffer
+
+            if (( ! is_git_log_ahead_behind_header_buf_printed )); then
+              print_git_log_ahead_behind_header=1
+            fi
+          fi
+        done
+      done
+    done
+  }
+
   function git_status_impl()
   {
     local IFS
@@ -844,7 +1066,7 @@ $0: info: exclude_dirs: \`$exclude_dirs\`" >&2
         exec_auto_buf echo -en "\e[0;32m"
       fi
 
-      exec_auto_buf realpath "$git_path"
+      exec_auto_buf realpath -- "$git_path"
 
       if (( ! no_color )); then
         exec_auto_buf echo -en "\e[0m"
@@ -930,6 +1152,11 @@ $0: info: exclude_dirs: \`$exclude_dirs\`" >&2
       if (( ! no_diff_checks )); then
         call_auto_buf git ${git_bare_C_path[*]} ${git_bare_flags[*]} diff ${git_diff_bare_flags[*]} --check
         accum_buf_status
+      fi
+
+      # print log ahead/behind
+      if (( ! no_log_ahead_behind )); then
+        git_log_ahead_behind_impl
       fi
 
       # traverse worktrees starting from the second

@@ -81,6 +81,7 @@
 
 # <dir>
 #   Directory to start search from using `find` tool.
+#   If empty, then `.` is used.
 
 # <input-file-name-pattern>:
 #   Path pattern for the `find` tool to find `vcstool` repository file(s).
@@ -193,7 +194,7 @@ function path_distance_rel_to()
   local path0="$1"
   local path1="$2"
   local dist
-  local relpath="$(realpath -m --relative-to="$path0" "$path1")"
+  local relpath="$(realpath -m --relative-to="$path0" -- "$path1")"
 
   if [[ "$relpath" == ".." || "$relpath" == */.. ]]; then
     relpath="${relpath}/"
@@ -259,7 +260,7 @@ function detect_shell_userdir_file()
     local OLD_SHOPT
     tkl_set_shopt_nocasematch
 
-    local __shell="$(realpath "$(cygpath -w "$SHELL")")"
+    local __shell="$(realpath -- "$(cygpath -w -- "$SHELL")")"
     local __path
     local __paths=()
     local __dists=()
@@ -267,7 +268,7 @@ function detect_shell_userdir_file()
     local RETURN_VALUE
 
     IFS=$'\r\n'; for __path in `where "$__value" 2>/dev/null`; do # IFS - with trim trailing line feeds
-      __path="$(cygpath -w "$(realpath "${__path//\\//}")")"
+      __path="$(cygpath -w -- "$(realpath -- "${__path//\\//}")")"
       __path="${__path//\\//}"
 
       # collect paths and distances to `SHELL` variable value
@@ -477,6 +478,9 @@ $0: info: exclude_dirs: \`$exclude_dirs\`" >&2
 
   # prefix all relative paths with './' to apply the exclude dirs
   for (( i=0; i < ${#exclude_dirs_arr[@]}; i++ )); do
+    # convert to backend path
+    exclude_dirs_arr[i]="$(cygpath -u -- "${exclude_dirs_arr[i]}")"
+
     if [[ "${exclude_dirs_arr[i]:0:1}" != "/" && "${exclude_dirs_arr[i]:0:2}" != "./" && "${exclude_dirs_arr[i]:0:3}" != "../" ]]; then
       exclude_dirs_arr[i]="./${exclude_dirs_arr[i]}"
     fi

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # USAGE:
-#   git_bare_config_deny_rewrite.sh <dir> [<dir-path-pattern>...]
+#   git_bare_config_deny_rewrite.sh [<dir> [<dir-path-pattern>...]]
 
 # Description:
 #   Script to deny rewrite in a bare git repository or in a list of git bare
@@ -52,7 +52,7 @@ function path_distance_rel_to()
   local path0="$1"
   local path1="$2"
   local dist
-  local relpath="$(realpath -m --relative-to="$path0" "$path1")"
+  local relpath="$(realpath -m --relative-to="$path0" -- "$path1")"
 
   if [[ "$relpath" == ".." || "$relpath" == */.. ]]; then
     relpath="${relpath}/"
@@ -118,7 +118,7 @@ function detect_shell_userdir_file()
     local OLD_SHOPT
     tkl_set_shopt_nocasematch
 
-    local __shell="$(realpath "$(cygpath -w "$SHELL")")"
+    local __shell="$(realpath -- "$(cygpath -w -- "$SHELL")")"
     local __path
     local __paths=()
     local __dists=()
@@ -126,7 +126,7 @@ function detect_shell_userdir_file()
     local RETURN_VALUE
 
     IFS=$'\r\n'; for __path in `where "$__value" 2>/dev/null`; do # IFS - with trim trailing line feeds
-      __path="$(cygpath -w "$(realpath "${__path//\\//}")")"
+      __path="$(cygpath -w -- "$(realpath -- "${__path//\\//}")")"
       __path="${__path//\\//}"
 
       # collect paths and distances to `SHELL` variable value
@@ -170,10 +170,11 @@ function git_bare_config_deny_rewrite()
 {
   local IFS
 
-  local dir="$1"
-  local dir_path_pttn_arr=("$2")
+  local dir="${1:-.}"
 
-  shift 2
+  shift
+
+  local dir_path_pttn_arr=()
 
   while [[ -n "${1+x}" ]]; do
     dir_path_pttn_arr=("${dir_path_pttn_arr[@]}" "$1")
@@ -190,11 +191,14 @@ function git_bare_config_deny_rewrite()
   for (( i=0; i < ${#dir_path_pttn_arr[@]}; i++ )); do
     dir_path_pttn="${dir_path_pttn_arr[i]}"
 
-    if [[ "$name_pttn" == '.git' || "$name_pttn" == '*' || "$name_pttn" == '.' ]]; then
+    if [[ "$dir_path_pttn" == '*' || "$dir_path_pttn" == '.' ]]; then
       dir_path_pttn=''
     fi
 
     if [[ -n "$dir_path_pttn" ]]; then
+      # convert to backend path
+      dir_path_pttn="$(cygpath -u -- "$dir_path_pttn")"
+
       if [[ "${dir_path_pttn:0:1}" != "/" && "${dir_path_pttn:0:2}" != "./" && "${dir_path_pttn:0:3}" != "../" ]]; then
         find_bare_include_filter="$find_bare_include_filter${find_bare_include_filter+ -o} -path \"*/${dir_path_pttn//\\/\\\\}\""
       else
