@@ -2,8 +2,6 @@
 
 - Add script to remove commits by list of tree path pattern.
 
-- Detect not pushed commits for remotes in `git-status.sh` script
-
 - Support skip/traverse submodules
 
 - Support traverse externals using `vcstool`, `vcs2l` or `gitman`

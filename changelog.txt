@@ -1,4 +1,7 @@
 2026.08.08:
+* changed: TODO.txt: todo update
+
+2026.08.08:
 * fixed: scripts: git_status.sh, git_pull.sh, git_bare_config_*_rewrite.sh, vcstool/git_gen_gitmodules.sh: absolute paths usage fixup
 * fixed: scripts/*.sh: `cygpath` and `realpath` usage with `--` before a positional parameter
 * new: scripts/git_status.sh: print unpushed and unpulled commits in local branches for all remotes using `git log` command and `--no-log-ahead-behind` flag to skip it, `--no-warn-missed-branch-refs` flag to not warn in case of missed branch references in the local or remote
