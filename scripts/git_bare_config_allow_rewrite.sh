@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # USAGE:
-#   git_bare_config_allow_rewrite.sh <dir> [<dir-name-pattern>]
+#   git_bare_config_allow_rewrite.sh <dir> [<dir-path-pattern>...]
 
 # Description:
 #   Script to allow rewrite in a bare git repository or in a list of git bare
@@ -47,12 +47,59 @@ function tkl_restore_shopt()
   fi
 }
 
+function path_distance_rel_to()
+{
+  local path0="$1"
+  local path1="$2"
+  local dist
+  local relpath="$(realpath -m --relative-to="$path0" "$path1")"
+
+  if [[ "$relpath" == ".." || "$relpath" == */.. ]]; then
+    relpath="${relpath}/"
+  fi
+
+  while [[ "$relpath" == ../* ]]; do
+    dist=$((dist + 1))
+    relpath="${relpath#../}"
+  done
+
+  if [[ -n "$dist" ]]; then
+    RETURN_VALUE=$dist
+    return 0
+  fi
+
+  RETURN_VALUE=''
+
+  return 1
+}
+
+# return nothing if different drives
+function path_distance()
+{
+  path_distance_rel_to "$1" "$2"
+  local dist0=$RETURN_VALUE
+
+  path_distance_rel_to "$2" "$1"
+  local dist1=$RETURN_VALUE
+
+  if [[ -n "$dist0$dist1" ]]; then
+    RETURN_VALUE=$(( dist0 + dist1 ))
+    return 0
+  fi
+
+  RETURN_VALUE=''
+
+  return 1
+}
+
 # Based on:
 #   https://stackoverflow.com/questions/71928010/makefile-on-windows-is-there-a-way-to-force-make-to-use-the-mingw-find-exe/76393735#76393735
 #
-function detect_find()
+function detect_shell_userdir_file()
 {
-  SHELL_FIND=find
+  local __var="$1"
+  local __value="$2"
+  local __is_found=0
 
   local IFS
 
@@ -61,63 +108,126 @@ function detect_find()
   #     1. Does not handle a unicode string case conversion correctly (unicode characters translation in words).
   #     2. Supported in Bash 4+.
 
-  # detect `find.exe` in Windows behind `$SYSTEMROOT\System32\find.exe`
-  if which where >/dev/null 2>&1; then
+  # detect a shell package executable behind directories from the `PATH` variable
+  if [[ -n "${SHELL+x}" ]] && \
+      which where >/dev/null 2>&1 && \
+      which realpath >/dev/null 2>&1 && \
+      which cygpath >/dev/null 2>&1; then
+    __value="${__value//\\//}"
+
     local OLD_SHOPT
     tkl_set_shopt_nocasematch
 
-    local path
+    local __shell="$(realpath "$(cygpath -w "$SHELL")")"
+    local __path
+    local __paths=()
+    local __dists=()
 
-    IFS=$'\r\n'; for path in `where find 2>/dev/null`; do # IFS - with trim trailing line feeds
-      case "$path" in # with case insensitive comparison
-        "$SYSTEMROOT"\\*) ;;
-        "$WINDIR"\\*) ;;
-        *)
-          SHELL_FIND="$path"
-          break
-          ;;
-      esac
+    local RETURN_VALUE
+
+    IFS=$'\r\n'; for __path in `where "$__value" 2>/dev/null`; do # IFS - with trim trailing line feeds
+      __path="$(cygpath -w "$(realpath "${__path//\\//}")")"
+      __path="${__path//\\//}"
+
+      # collect paths and distances to `SHELL` variable value
+      path_distance "$__path" "$__shell"
+
+      IFS=$' \t\r\n'
+      __paths=("${__paths[@]}" "$__path")
+      __dists=("${__dists[@]}" "$RETURN_VALUE")
+
+      #echo "$RETURN_VALUE: $__path; $__shell"
     done
 
+    local __index __mindist=65535 # max distance
+
+    # return path with existed minimal distance
+    for (( __index=0; __index < ${#__paths[@]}; __index++ )); do
+      __dist="${__dists[__index]}"
+      if [[ -n "$__dist" ]] && (( __dist < __mindist )); then
+        __path="${__paths[__index]}"
+        __mindist=$__dist
+
+        if (( ! __mindist )); then
+          break
+        fi
+      fi
+    done
+
+    __is_found=$(( __mindist < 65535 ))
+
     tkl_restore_shopt
+  fi
+
+  if (( __is_found )); then
+    eval "$__var=\"\$__path\""
+  else
+    eval "$__var=\"\$__value\""
   fi
 }
 
 function git_bare_config_allow_rewrite()
 {
+  local IFS
+
   local dir="$1"
-  local name_pttn="$2"
+  local dir_path_pttn_arr=("$2")
+
+  shift 2
+
+  while [[ -n "${1+x}" ]]; do
+    dir_path_pttn_arr=("${dir_path_pttn_arr[@]}" "$1")
+    shift
+  done
+
+  # 1. prefix all relative paths with '*/' to apply the include/exclude dirs at any level
+  # 2. escape all `\`
+
+  # build include dir
+  local find_bare_include_filter
+  local dir_path_pttn
+
+  for (( i=0; i < ${#dir_path_pttn_arr[@]}; i++ )); do
+    dir_path_pttn="${dir_path_pttn_arr[i]}"
+
+    if [[ "$name_pttn" == '.git' || "$name_pttn" == '*' || "$name_pttn" == '.' ]]; then
+      dir_path_pttn=''
+    fi
+
+    if [[ -n "$dir_path_pttn" ]]; then
+      if [[ "${dir_path_pttn:0:1}" != "/" && "${dir_path_pttn:0:2}" != "./" && "${dir_path_pttn:0:3}" != "../" ]]; then
+        find_bare_include_filter="$find_bare_include_filter${find_bare_include_filter+ -o} -path \"*/${dir_path_pttn//\\/\\\\}\""
+      else
+        find_bare_include_filter="$find_bare_include_filter${find_bare_include_filter+ -o} -path \"${dir_path_pttn//\\/\\\\}\""
+      fi
+    fi
+  done
+
+  if [[ -n "$find_bare_include_filter" ]]; then
+    find_bare_include_filter=" \\($find_bare_include_filter \\)"
+  fi
 
   local git_path
 
-  local IFS
+  # detect find utility
+  local findcmd
+  detect_shell_userdir_file findcmd "find"
 
-  if [[ -n "$name_pttn" ]]; then
-    detect_find
+  local eval_find_expr='"$findcmd" "$dir" -type d -iname ".git"'"$find_bare_include_filter"
 
-    # cygwin workaround
-    SHELL_FIND="${SHELL_FIND//\\//}"
+  #echo "$eval_find_expr"
 
-    IFS=$'\r\n'; for git_path in `"$SHELL_FIND" "$dir" -name "$name_pttn" -type d`; do # IFS - with trim trailing line feeds
-      call pushd "$git_path" && {
-        call git config receive.denynonfastforwards false
-        call popd
-      }
-    done
-  else
-    call pushd "$dir" && {
-      call git config receive.denynonfastforwards false
+  IFS=$'\r\n'; for git_path in `eval $eval_find_expr`; do # IFS - with trim trailing line feeds
+    git_path="${git_path%/.git}"
+    call pushd "$git_path" && {
+      [[ "$(git rev-parse --is-bare-repository)" != 'true' ]] || call git config receive.denynonfastforwards false
       call popd
+
+      echo -e "\n---\n"
     }
-  fi
+  done
 
   return 0
-}
-
-# shortcut
-function git_bc_al_rw()
-{
-  git_bare_config_allow_rewrite "$@"
 }
 
 if [[ -z "$BASH_LINENO" || BASH_LINENO[0] -eq 0 ]]; then

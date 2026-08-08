@@ -1,4 +1,11 @@
 2026.08.08:
+* fixed: scripts/git_status.sh: missed to read a worktree config if present
+* fixed: scripts/git_bare_config_*_rewrite.sh: change only bare repositories
+* changed: scripts/git_bare_config_*_rewrite.sh: improved include directories pattern traverse
+* changed: scripts/*.sh: replace `detect_find` function by more reliable `detect_shell_userdir_file` function
+* changed: scripts/*.sh: code refactor and cleanup
+
+2026.08.08:
 * fixed: scripts/*.sh: wrong variable declaration detection in `tkl_set_shopt_nocasematch` function
 
 2026.08.08:

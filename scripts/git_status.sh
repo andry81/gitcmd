@@ -397,42 +397,6 @@ function tkl_restore_shopt()
   fi
 }
 
-# Based on:
-#   https://stackoverflow.com/questions/71928010/makefile-on-windows-is-there-a-way-to-force-make-to-use-the-mingw-find-exe/76393735#76393735
-#
-function detect_find()
-{
-  SHELL_FIND=find
-
-  local IFS
-
-  # NOTE:
-  #   The `${path,,}` or `${path^^}` form has issues:
-  #     1. Does not handle a unicode string case conversion correctly (unicode characters translation in words).
-  #     2. Supported in Bash 4+.
-
-  # detect `find.exe` in Windows behind `$SYSTEMROOT\System32\find.exe`
-  if which where >/dev/null 2>&1; then
-    local OLD_SHOPT
-    tkl_set_shopt_nocasematch
-
-    local path
-
-    IFS=$'\r\n'; for path in `where find 2>/dev/null`; do # IFS - with trim trailing line feeds
-      case "$path" in # with case insensitive comparison
-        "$SYSTEMROOT"\\*) ;;
-        "$WINDIR"\\*) ;;
-        *)
-          SHELL_FIND="$path"
-          break
-          ;;
-      esac
-    done
-
-    tkl_restore_shopt
-  fi
-}
-
 function path_distance_rel_to()
 {
   local path0="$1"
@@ -734,7 +698,7 @@ $0: info: exclude_dirs: \`$exclude_dirs\`" >&2
   }
 
   # 1. prefix all relative paths with '*/' to apply the include/exclude dirs at any level
-  # 2. suffix all paths with '/*' to include/exclude the search after the directory
+  # 2. suffix all paths with '/*' to exclude the search after the directory
   # 3. escape all `\`
 
   # build include dir
@@ -919,6 +883,12 @@ $0: info: exclude_dirs: \`$exclude_dirs\`" >&2
         for git_config_type in local; do
           print_not_default_git_config_key_value_impl
         done
+
+        if [[ -f '.git/config.worktree' ]]; then
+          for git_config_type in worktree; do
+            print_not_default_git_config_key_value_impl
+          done
+        fi
       fi
 
       # request, save and print worktrees
@@ -1218,17 +1188,16 @@ $0: info: exclude_dirs: \`$exclude_dirs\`" >&2
     git_config_globals_init_and_check_impl
   fi
 
-  detect_find
-
-  # cygwin workaround
-  SHELL_FIND="${SHELL_FIND//\\//}"
+  # detect find utility
+  local findcmd
+  detect_shell_userdir_file findcmd "find"
 
   local eval_find_expr
 
   if (( no_skip_worktrees )); then
-    eval_find_expr='"$SHELL_FIND" "$dir" -type d -iname ".git"'"$find_bare_include_filter$find_bare_exclude_filter"
+    eval_find_expr='"$findcmd" "$dir" -type d -iname ".git"'"$find_bare_include_filter$find_bare_exclude_filter"
   else
-    eval_find_expr='"$SHELL_FIND" "$dir" -type d'"$find_bare_include_filter$find_bare_exclude_filter"' -exec test -e "{}/.git" \;'"$find_bare_exclude_filter2"' -prune -print | { while IFS=$'\''\r\n'\'' read -r path; do if [[ ! -f "$path/.git" ]]; then echo $path; fi; done }'
+    eval_find_expr='"$findcmd" "$dir" -type d'"$find_bare_include_filter$find_bare_exclude_filter"' -exec test -e "{}/.git" \;'"$find_bare_exclude_filter2"' -prune -print | { while IFS=$'\''\r\n'\'' read -r path; do if [[ ! -f "$path/.git" ]]; then echo $path; fi; done }'
   fi
 
   #echo "$eval_find_expr"
