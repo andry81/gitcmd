@@ -8,73 +8,84 @@
 # Multiple values is considered not default even if all or the last value is default.
 # Boolean values other than `true`/`false` is considered not default even if treated boolean by the Git or has a different case.
 
+# The `<os_type>=SKIP` to skip the check for the key with known prefix.
+# All other keys does skip if a prefix is not known.
+
 # CAUTION:
 #   All keys with the same name must follow in a single sequence.
 
-WIN:core.fileMode                 =false        # used to be `false` due to MSys layer
-    core.fileMode                 =true
-    core.hideDotFiles             =dotGitOnly
-WIN:core.ignoreCase               =true
-    core.ignoreCase               =false
-    core.precomposeUnicode        =false
-MAC:core.protectHFS               =true
-    core.protectHFS               =false
-WIN:core.protectNTFS              =true
-    core.protectNTFS              =false
-    core.fsmonitor
-    core.fsmonitorHookVersion
-    core.trustctime               =true
-    core.splitIndex               =false
-    core.untrackedCache           =keep
-    core.checkStat                =default
-    core.quotePath                =true
-    core.eol=native
-    core.safecrlf                 =warn
-    core.autocrlf                 =false
-    core.checkRoundtripEncoding   =SHIFT-JIS
-WIN:core.symlinks                 =false
-    core.symlinks                 =true
-    core.gitProxy
-    core.sshCommand
-    core.ignoreStat               =false
-    core.preferSymlinkRefs        =symref
-    core.alternateRefsCommand
-    core.alternateRefsPrefixes
-    core.worktree
-    core.lockfilePid              =false
-    core.logAllRefUpdates         =true
-    core.repositoryFormatVersion  =0            # details: https://www.kernel.org/pub/software/scm/git/docs/gitrepository-layout.html#_git_repository_format_versions
-    core.sharedRepository         =false
-    core.warnAmbiguousRefs        =true
-    core.compression
-    core.looseCompression
-    core.packedGitWindowSize
-    core.packedGitLimit
-    core.deltaBaseCacheLimit
-    core.bigFileThreshold
-    core.excludesFile
-    core.askPass
-    core.attributesFile
-    core.hooksPath
-    core.commentChar              =\#
-    core.commentString            =//
-    core.filesRefLockTimeout      =100
-    core.packedRefsTimeout        =1000
-    core.configLockTimeout        =1000
-    core.pager
-    core.whitespace
-    core.fsync
-    core.fsyncMethod
-    core.fsyncObjectFiles
-    core.preloadIndex             =true
-    core.unsetenvvars
-    core.createObject
-    core.notesRef
-    core.commitGraph              =true
-    core.useReplaceRefs           =true
-    core.multiPackIndex           =true
-    core.sparseCheckout
-    core.sparseCheckoutCone
-    core.abbrev
-    core.maxTreeDepth
+WIN:  core.fileMode                 =false        # used to be `false` due to MSys layer
+      core.fileMode                 =true
+      core.hideDotFiles             =dotGitOnly
+WIN:  core.ignoreCase               =true
+      core.ignoreCase               =false
+      core.precomposeUnicode        =false
+MAC:  core.protectHFS               =true
+      core.protectHFS               =false
+WIN:  core.protectNTFS              =true
+      core.protectNTFS              =false
+      core.fsmonitor
+      core.fsmonitorHookVersion
+      core.trustctime               =true
+      core.splitIndex               =false
+      core.untrackedCache           =keep
+      core.checkStat                =default
+      core.quotePath                =true
+      core.eol=native
+      core.safecrlf                 =warn
+      core.autocrlf                 =false
+      core.checkRoundtripEncoding   =SHIFT-JIS
+WIN:  core.symlinks                 =false
+      core.symlinks                 =true
+      core.gitProxy
+      core.sshCommand
+      core.ignoreStat               =false
+      core.preferSymlinkRefs        =symref
+      core.alternateRefsCommand
+      core.alternateRefsPrefixes
+SKIP: core.bare
+      core.worktree
+      core.lockfilePid              =false
+      core.logAllRefUpdates         =true
+      core.repositoryFormatVersion  =0            # details: https://www.kernel.org/pub/software/scm/git/docs/gitrepository-layout.html#_git_repository_format_versions
+      core.sharedRepository         =false
+      core.warnAmbiguousRefs        =true
+      core.compression
+      core.looseCompression
+      core.packedGitWindowSize
+      core.packedGitLimit
+      core.deltaBaseCacheLimit
+      core.bigFileThreshold
+      core.excludesFile
+      core.askPass
+      core.attributesFile
+      core.hooksPath
+SKIP: core.editor
+      core.commentChar              =\#
+      core.commentString            =//
+      core.filesRefLockTimeout      =100
+      core.packedRefsTimeout        =1000
+      core.configLockTimeout        =1000
+      core.pager
+      core.whitespace
+      core.fsync
+      core.fsyncMethod
+      core.fsyncObjectFiles
+      core.preloadIndex             =true
+      core.unsetenvvars
+      core.createObject
+      core.notesRef
+      core.commitGraph              =true
+      core.useReplaceRefs           =true
+      core.multiPackIndex           =true
+      core.sparseCheckout
+      core.sparseCheckoutCone
+      core.abbrev
+      core.maxTreeDepth
 
+# undocumented keys
+
+# https://github.com/git/git/commit/be667e40cbe2975aaf44748f5ee237e0d79359af
+WIN:  core.fscache                  =true
+
+# the rest of keys with not known (builtin) prefix is skipped

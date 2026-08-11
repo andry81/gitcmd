@@ -1248,6 +1248,7 @@ $0: info: exclude_dirs: \`$exclude_dirs\`" >&2
     local cfg_line
     local key_os_type key value
 
+    known_config_default_key_prefixes=(core.)
     known_config_default_keys_os_type=()
     known_config_default_keys=()
     known_config_default_values=()
@@ -1295,9 +1296,10 @@ $0: info: exclude_dirs: \`$exclude_dirs\`" >&2
       local IFS
 
       local cfg_key cfg_value last_known_cfg_key last_filtered_cfg
-      local known_cfg last_known_applied_key
+      local known_cfg last_known_applied_key known_key_prefix
       local i buf
       local set_shopt_nocasematch
+      local is_known_key
 
       local eval_git_config_system_cmd="git ${git_bare_script_flags[*]} config --$git_config_type --list | $sortcmd -s -t= -k1,1d"
 
@@ -1347,6 +1349,10 @@ $0: info: exclude_dirs: \`$exclude_dirs\`" >&2
           if [[ "$cfg_key" == "$key" ]]; then
             last_known_cfg_key="$cfg_key"
 
+            if [[ "$key_os_type" == "SKIP" ]]; then
+              break
+            fi
+
             if [[ -z "$key_os_type" || "$key_os_type" == "$os_type" ]]; then
               last_known_applied_key="$key"
 
@@ -1384,13 +1390,38 @@ $0: info: exclude_dirs: \`$exclude_dirs\`" >&2
             fi
           fi
         done
+
+        if [[ -z "$last_known_cfg_key" ]]; then
+          is_known_key=1 # skip keys with unknown prefixes
+
+          for known_key_prefix in "${known_config_default_key_prefixes[@]}"; do
+            if [[ "$cfg_key" =~ ^${known_key_prefix//./\\.}[a-zA-Z0-9]+ ]]; then
+              is_known_key=0
+              break
+            fi
+          done
+
+          # print not known keys as: `? key=value`
+          if (( ! is_known_key )); then
+            #echo "=? $cfg_key=$cfg_value"
+            if (( ! no_color )); then
+              buf="$buf\e[0;31m?\e[0m $cfg_key=$cfg_value"$'\n'
+            else
+              buf="$buf? $cfg_key=$cfg_value"$'\n'
+            fi
+          fi
+        fi
       done <<< "$(eval $eval_git_config_system_cmd)"
 
       tkl_restore_shopt
 
       # if not empty
       if [[ -n "$buf" ]]; then
-        exec_auto_buf echo -n "$buf"
+        if (( ! no_color )); then
+          exec_auto_buf echo -en "$buf"
+        else
+          exec_auto_buf echo -n "$buf"
+        fi
         accum_buf_status
       fi
 
@@ -1433,6 +1464,7 @@ $0: info: exclude_dirs: \`$exclude_dirs\`" >&2
   tkl_restore_shopt
 
   if (( ! no_print_config )); then
+    local known_config_default_key_prefixes
     local known_config_default_keys_os_type known_config_default_keys known_config_default_values
     local sortcmd
     git_config_globals_init_and_check_impl
