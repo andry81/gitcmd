@@ -387,6 +387,49 @@ function accum_buf_status()
   return $last_error
 }
 
+# NOTE:
+#
+#   * `tkl_*trim*`
+#
+#   Based on: https://github.com/dylanaraps/pure-bash-bible#trim-leading-and-trailing-white-space-from-string
+
+function tkl_ltrim_char_cls()
+{
+  local str="$1"
+  local char_class="$2"
+
+  RETURN_VALUE="${str#"${str%%$char_class*}"}"
+}
+
+function tkl_rtrim_char_cls()
+{
+  local str="$1"
+  local char_class="$2"
+
+  RETURN_VALUE="${str%"${str##*$char_class}"}"
+}
+
+function tkl_trim_char_cls()
+{
+  tkl_ltrim_char_cls "$1" "$2"
+  tkl_rtrim_char_cls "$RETURN_VALUE" "$2"
+}
+
+function tkl_ltrim_chars()
+{
+  tkl_ltrim_char_cls "$1" "[^$2]"
+}
+
+function tkl_rtrim_chars()
+{
+  tkl_rtrim_char_cls "$1" "[^$2]"
+}
+
+function tkl_trim_chars()
+{
+  tkl_trim_char_cls "$1" "[^$2]"
+}
+
 function tkl_set_shopt_nocasematch()
 {
   # CAUTION `OLD_SHOPT` variable must be declared and empty before the call!
@@ -1189,47 +1232,56 @@ $0: info: exclude_dirs: \`$exclude_dirs\`" >&2
   {
     local IFS
 
-    # details: https://github.com/git/git/tree/HEAD/Documentation/config/core.adoc
-    # implemented on: docs/git/Documentation/config/core.adoc
-
     # CAUTION:
-    #   All keys with the same name must follow in a single sequence.
+    #   All Git config keys does print in lower case in Windows.
 
-    # CAUTION:
-    #   The `core.ignoreCase` does print in lower case in Windows.
+    local SOURCE_FILE=${BASH_SOURCE[0]:-${0//\\//}}
 
-    # Keys considered default if not set or set to <default_value>.
-    # Multiple values is considered not default even if all or the last value is default.
-    # Boolean values other than `true`/`false` is considered not default even if treated boolean by the Git or has a different case.
-    # format: [<os_type>:]<key>=<default_value>
-    known_config_core_default_keys=(
-      # used to be `false` due to MSys layer
-      WIN:fileMode=false
-      fileMode=true hideDotFiles=dotGitOnly WIN:ignoreCase=true ignoreCase=false
-      precomposeUnicode=false MAC:protectHFS=true protectHFS=false
-      WIN:protectNTFS=true protectNTFS=false trustctime=true splitIndex=false
-      untrackedCache=keep checkStat=default quotePath=true eol=native
-      safecrlf=warn autocrlf=false checkRoundtripEncoding=SHIFT-JIS
-      WIN:symlinks=false symlinks=true ignoreStat=false preferSymlinkRefs=symref
-      lockfilePid=false logAllRefUpdates=true
-      # details: https://www.kernel.org/pub/software/scm/git/docs/gitrepository-layout.html#_git_repository_format_versions
-      repositoryFormatVersion=0
-      sharedRepository=false warnAmbiguousRefs=true
-      commentChar=\# commentString=// filesRefLockTimeout=100
-      packedRefsTimeout=1000 configLockTimeout=1000 preloadIndex=true
-      commitGraph=true useReplaceRefs=true multiPackIndex=true
-    )
+    if [[ "${SOURCE_FILE:0:1}" == '/' || "${SOURCE_FILE:1:1}" == ':' ]]; then
+      local SOURCE_DIR=${SOURCE_FILE%/*}
+    elif [[ "${SOURCE_FILE/\//}" != "$SOURCE_FILE" && "${SOURCE_FILE%/*}" != '.' ]]; then
+      local SOURCE_DIR=$PWD/${SOURCE_FILE%/*}
+    else
+      local SOURCE_DIR=$PWD
+    fi
 
-    # Keys considered default if not exist (an empty value is considered as not default).
-    # format: [<os_type>:]<key>
-    known_config_core_default_empty_keys=(
-      fsmonitor fsmonitorHookVersion gitProxy sshCommand alternateRefsCommand
-      alternateRefsPrefixes worktree compression looseCompression
-      packedGitWindowSize packedGitLimit deltaBaseCacheLimit bigFileThreshold
-      excludesFile askPass attributesFile hooksPath pager whitespace
-      fsync fsyncMethod fsyncObjectFiles unsetenvvars createObject notesRef
-      sparseCheckout sparseCheckoutCone abbrev maxTreeDepth
-    )
+    local cfg_line
+    local key_os_type key value
+
+    known_config_default_keys_os_type=()
+    known_config_default_keys=()
+    known_config_default_values=()
+
+    while IFS=$'\r\n' read cfg_line; do
+      IFS=$'\r\n' read -d '#' cfg_line <<< "$cfg_line"
+      IFS='=' read key value <<< "$cfg_line"
+      IFS=':' read key_os_type key <<< "$key"
+
+      if [[ -n "$key_os_type" ]]; then
+        tkl_trim_chars "$key_os_type" '[:space:]'
+        key_os_type="$RETURN_VALUE"
+      fi
+
+      if [[ -n "$key" ]]; then
+        tkl_trim_chars "$key" '[:space:]'
+        key="$RETURN_VALUE"
+      else
+        key="$key_os_type"
+        key_os_type=''
+      fi
+
+      if [[ -n "$value" ]]; then
+        tkl_trim_chars "$value" '[:space:]'
+        value="$RETURN_VALUE"
+      fi
+
+      if [[ -n "$key" ]]; then
+        #echo "$key_os_type${key_os_type:+:}$key=$value"
+        known_config_default_keys_os_type=("${known_config_default_keys_os_type[@]}" "$key_os_type")
+        known_config_default_keys=("${known_config_default_keys[@]}" "$key")
+        known_config_default_values=("${known_config_default_values[@]}" "$value")
+      fi
+    done < "$SOURCE_DIR/.impl/default_git_config.in"
 
     # detect sort utility
     detect_shell_userdir_file sortcmd "sort"
@@ -1242,10 +1294,9 @@ $0: info: exclude_dirs: \`$exclude_dirs\`" >&2
     {
       local IFS
 
-      local key_os_type key value
       local cfg_key cfg_value last_known_cfg_key last_filtered_cfg
       local known_cfg last_known_applied_key
-      local buf
+      local i buf
       local set_shopt_nocasematch
 
       local eval_git_config_system_cmd="git ${git_bare_script_flags[*]} config --$git_config_type --list | $sortcmd -s -t= -k1,1d"
@@ -1284,80 +1335,52 @@ $0: info: exclude_dirs: \`$exclude_dirs\`" >&2
         last_known_applied_key=''
         last_filtered_cfg=''
 
-        IFS=$' \t'; for known_cfg in "${known_config_core_default_keys[@]}"; do
-          IFS='=' read key value <<< "$known_cfg"
-          IFS=':' read key_os_type key <<< "$key"
-
-          if [[ -z "$key" ]]; then
-            key="$key_os_type"
-            key_os_type=''
-          fi
+        for (( i=0; i < ${#known_config_default_keys[@]}; i++ )); do
+          key_os_type="${known_config_default_keys_os_type[i]}"
+          key="${known_config_default_keys[i]}"
+          value="${known_config_default_values[i]}"
 
           if [[ "$last_known_applied_key" == "$key" ]]; then
             break
           fi
 
-          if [[ "$cfg_key" == "core.$key" ]]; then
+          if [[ "$cfg_key" == "$key" ]]; then
             last_known_cfg_key="$cfg_key"
 
             if [[ -z "$key_os_type" || "$key_os_type" == "$os_type" ]]; then
               last_known_applied_key="$key"
 
-              if [[ -z "$cfg_value" ]]; then
-                #echo "=$cfg_key="
-                buf="$buf$cfg_key=$cfg_value"$'\n'
-              else
-                # restore case sensitivity to compare key values
-                if [[ "$os_type" == "WIN" ]]; then
-                  tkl_restore_shopt
-                  set_shopt_nocasematch=1
-                else
-                  set_shopt_nocasematch=0
-                fi
-
-                if [[ "$cfg_value" != "$value" ]]; then
-                  #echo "=$cfg_key=$cfg_value|$value|"
+              if [[ -n "$value" ]]; then
+                if [[ -z "$cfg_value" ]]; then
+                  #echo "=$cfg_key="
                   buf="$buf$cfg_key=$cfg_value"$'\n'
                 else
-                  last_filtered_cfg="$cfg_key=$cfg_value"$'\n' # would be printed if known cfg key is duplicated
-                fi
+                  # restore case sensitivity to compare key values
+                  if [[ "$os_type" == "WIN" ]]; then
+                    tkl_restore_shopt
+                    set_shopt_nocasematch=1
+                  else
+                    set_shopt_nocasematch=0
+                  fi
 
-                if (( set_shopt_nocasematch )); then
-                  local OLD_SHOPT
-                  tkl_set_shopt_nocasematch
+                  if [[ "$cfg_value" != "$value" ]]; then
+                    #echo "=$cfg_key=$cfg_value|$value|"
+                    buf="$buf$cfg_key=$cfg_value"$'\n'
+                  else
+                    last_filtered_cfg="$cfg_key=$cfg_value"$'\n' # would be printed if known cfg key is duplicated
+                  fi
+
+                  if (( set_shopt_nocasematch )); then
+                    local OLD_SHOPT
+                    tkl_set_shopt_nocasematch
+                  fi
                 fi
+              else
+                #echo "=$cfg_key=$cfg_value|$value|"
+                buf="$buf$cfg_key=$cfg_value"$'\n'
               fi
 
               break
-            fi
-          fi
-        done
-
-        if [[ -n "$last_known_cfg_key" ]]; then
-          continue
-        fi
-
-        IFS=$' \t'; for known_cfg in "${known_config_core_default_empty_keys[@]}"; do
-          IFS='=' read key value <<< "$known_cfg"
-          IFS=':' read key_os_type key <<< "$key"
-
-          if [[ -z "$key" ]]; then
-            key="$key_os_type"
-            key_os_type=''
-          fi
-
-          if [[ "$last_known_applied_key" == "$key" ]]; then
-            break
-          fi
-
-          if [[ "$cfg_key" == "core.$key" ]]; then
-            last_known_cfg_key="$cfg_key"
-
-            if [[ -z "$key_os_type" || "$key_os_type" == "$os_type" ]]; then
-              last_known_applied_key="$key"
-
-              #echo "=$cfg_key=$cfg_value|$value|"
-              buf="$buf$cfg_key=$cfg_value"$'\n'
             fi
           fi
         done
@@ -1410,7 +1433,7 @@ $0: info: exclude_dirs: \`$exclude_dirs\`" >&2
   tkl_restore_shopt
 
   if (( ! no_print_config )); then
-    local known_config_core_default_keys known_config_core_default_empty_keys
+    local known_config_default_keys_os_type known_config_default_keys known_config_default_values
     local sortcmd
     git_config_globals_init_and_check_impl
   fi

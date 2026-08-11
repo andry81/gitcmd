@@ -1,3 +1,6 @@
+2026.08.11:
+* changed: scripts/git_status.sh: moved internal db arrays into external file
+
 2026.08.08:
 * changed: TODO.txt: todo update
 
