@@ -25,7 +25,7 @@
 #   >
 #   git_init.sh userA repoA remote:sf:SSH_GIT_AUTH_USER=userB remote:gl:REPO=repoC
 
-# Environment variables (does evaluate as is):
+# Environment variables, does evaluate to a Shell array:
 #
 #   GIT_REPO_DEFAULT_REMOTES=(
 #     gh https://github.com/{{REPO_OWNER}}/{{REPO}}
@@ -144,7 +144,11 @@ function git_init()
 
   # evaluate and copy environment variables
 
-  eval declare GIT_REPO_DEFAULT_REMOTES=$GIT_REPO_DEFAULT_REMOTES
+  if [[ "${GIT_REPO_DEFAULT_REMOTES:0:1}" != '(' ]]; then
+    eval declare GIT_REPO_DEFAULT_REMOTES=($GIT_REPO_DEFAULT_REMOTES)
+  else
+    eval declare GIT_REPO_DEFAULT_REMOTES=$GIT_REPO_DEFAULT_REMOTES
+  fi
 
   local num_remotes=${#GIT_REPO_DEFAULT_REMOTES[@]}
   local remote_urls_arr=()

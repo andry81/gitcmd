@@ -1,3 +1,6 @@
+2026.08.21:
+* changed: scripts/git_init.sh: detect declaration format in `GIT_REPO_DEFAULT_REMOTES` variable
+
 2026.08.11:
 * new: docs/git/Documentation/config/print_headers.sh: script to extract documentation headers
 * changed: scripts: git_status.sh, .impl/default_git_config.in: detect and print not known `core.*` keys as `? key=value`
