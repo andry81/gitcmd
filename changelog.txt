@@ -1,4 +1,7 @@
 2026.08.21:
+* changed: scripts: *.sh: array variable evaluation through the `declare` keyword
+
+2026.08.21:
 * changed: scripts/git_init.sh: detect declaration format in `GIT_REPO_DEFAULT_REMOTES` variable
 
 2026.08.11:

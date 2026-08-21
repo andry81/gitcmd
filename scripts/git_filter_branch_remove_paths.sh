@@ -553,7 +553,7 @@ function git_filter_branch_remove_paths()
 
     # init
     local path_arr
-    eval path_arr=($path_list_cmdline)
+    eval declare path_arr=($path_list_cmdline)
 
     if (( ! flag_remove_submodules )); then
       if (( ${#path_arr[@]} )); then
@@ -577,7 +577,7 @@ function git_filter_branch_remove_paths()
     git checkout-index -- '.gitmodules' || return $?
 
     local option_skip_submodule_path_prefix_arr
-    eval option_skip_submodule_path_prefix_arr=($option_skip_submodule_paths_cmdline)
+    eval declare option_skip_submodule_path_prefix_arr=($option_skip_submodule_paths_cmdline)
 
     local is_external_path_filtered
     local external_path
@@ -697,7 +697,7 @@ function git_filter_branch_remove_paths()
     #   We will collect empty commits at the end, after the `.gitignore` update
     #
     local graft
-    eval graft=(${_0FFCA2F7_exec_revs_arr[_0FFCA2F7_exec_index]})
+    eval declare graft=(${_0FFCA2F7_exec_revs_arr[_0FFCA2F7_exec_index]})
 
     # NOTE:
     #   1. `.gitignore` can be synchronized ONLY when exists at least one parent commit.

@@ -455,7 +455,7 @@ function git_gen_gitmodules()
   local output_file_name_prefix="${3:-".gitmodules"}"
 
   local exclude_dirs_arr
-  eval exclude_dirs_arr=($exclude_dirs $USER_EXCLUDE_DIRS) || {
+  eval declare exclude_dirs_arr=($exclude_dirs $USER_EXCLUDE_DIRS) || {
     echo "$0: error: invalid parameter.
 $0: info: exclude_dirs: \`$exclude_dirs\`" >&2
     return 255
