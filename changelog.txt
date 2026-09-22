@@ -1,4 +1,7 @@
 2026.09.22:
+* new: scripts/git_cd.*: scripts to `cd` in a working copies tree
+
+2026.09.22:
 * refactor: scripts/git_init.sh: documentation refactor
 
 2026.08.21:
