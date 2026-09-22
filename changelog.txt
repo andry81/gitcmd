@@ -1,3 +1,6 @@
+2026.09.22:
+* refactor: scripts/git_init.sh: documentation refactor
+
 2026.08.21:
 * changed: scripts: *.sh: array variable evaluation through the `declare` keyword
 

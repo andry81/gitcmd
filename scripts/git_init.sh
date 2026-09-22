@@ -30,7 +30,7 @@
 #   GIT_REPO_DEFAULT_REMOTES=(
 #     gh https://github.com/{{REPO_OWNER}}/{{REPO}}
 #     gl https://gitlab.com/{{REPO_OWNER}}/{{REPO}}.git
-#     gv https://gitverse.ru/sc/{{REPO_OWNER}}/{{REPO}}.git
+#     gv https://gitverse.ru/{{REPO_OWNER}}/{{REPO}}.git
 #     gf https://gitflic.ru/project/{{REPO_OWNER}}/{{REPO}}.git
 #     gt https://gitea.com/{{REPO_OWNER}}/{{REPO}}.git
 #     sc https://git.sourcecraft.dev/{{REPO_OWNER}}/{{REPO}}.git
